@@ -1,4 +1,4 @@
-export const API_BASE_URL = "http://localhost:8080";
+export const API_BASE_URL = "https://speakmate-ai-friend.onrender.com";
 export const TOKEN_KEY = "speakmate_token";
 export const ROLE_KEY = "speakmate_role";
 export const USER_KEY = "speakmate_user";
