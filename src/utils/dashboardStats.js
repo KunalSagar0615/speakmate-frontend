@@ -1,5 +1,15 @@
+const getSessionDate = (session) => {
+  const rawDate = session?.createdAt || session?.created_at || session?.date || session?.timestamp || session?.sessionDate;
+  if (!rawDate) return null;
+
+  const parsed = new Date(rawDate);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const toDateKey = (date) => {
-  const d = new Date(date);
+  const d = date instanceof Date ? date : getSessionDate({ createdAt: date });
+  if (!d) return null;
+
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
@@ -9,7 +19,9 @@ export const computeDashboardStats = (sessions = []) => {
   const reportsGenerated = completedSessions;
 
   const practiceDaySet = new Set(
-    sessions.map((s) => toDateKey(s.createdAt)).filter((d) => d && !d.includes("NaN"))
+    sessions
+      .map((s) => toDateKey(getSessionDate(s) || s.createdAt))
+      .filter((d) => d && !d.includes("NaN"))
   );
   const practiceDays = practiceDaySet.size;
 
@@ -52,9 +64,10 @@ export const computeWeeklyActivity = (sessions = []) => {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const counts = Object.fromEntries(days.map((d) => [d, 0]));
 
-  sessions.forEach((s) => {
-    if (!s.createdAt) return;
-    const day = days[new Date(s.createdAt).getDay()];
+  sessions.forEach((session) => {
+    const createdAt = getSessionDate(session);
+    if (!createdAt) return;
+    const day = days[createdAt.getDay()];
     counts[day] += 1;
   });
 
@@ -63,18 +76,21 @@ export const computeWeeklyActivity = (sessions = []) => {
 
 export const computePracticeTrend = (sessions = []) => {
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const startOfCurrentWeek = new Date(now);
+  startOfCurrentWeek.setDate(now.getDate() - now.getDay());
+  startOfCurrentWeek.setHours(0, 0, 0, 0);
   const weeks = [];
 
   for (let i = 3; i >= 0; i -= 1) {
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - i * 7 - now.getDay());
-    weekStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date(startOfCurrentWeek);
+    weekStart.setDate(startOfCurrentWeek.getDate() - i * 7);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    const count = sessions.filter((s) => {
-      const created = new Date(s.createdAt);
-      return created >= weekStart && created < weekEnd;
+    const count = sessions.filter((session) => {
+      const createdAt = getSessionDate(session);
+      return createdAt && createdAt >= weekStart && createdAt < weekEnd;
     }).length;
 
     weeks.push({ week: `W${4 - i}`, sessions: count });

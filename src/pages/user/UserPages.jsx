@@ -12,8 +12,9 @@ import {
   Trophy,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { translateText, getTranslationLabel } from "../../utils/translation";
 import toast from "react-hot-toast";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ActivityHeatmap } from "../../components/charts/ActivityHeatmap";
 import { PracticeTrendChart, WeeklyActivityChart } from "../../components/charts/DashboardCharts";
 import { RadioGroup } from "../../components/common/RadioGroup";
@@ -189,9 +190,12 @@ export const UserDashboardPage = () => {
         <StatCard title="Reports Generated" value={analytics?.reportsGenerated ?? 0} />
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
-        <WeeklyActivityChart sessions={sessions} />
-        <PracticeTrendChart sessions={sessions} />
+        <WeeklyActivityChart sessions={sessions} loading={loading} />
+        <PracticeTrendChart sessions={sessions} loading={loading} />
       </div>
+      <Card className="w-full">
+        <ActivityHeatmap activityHeatmap={analytics?.activityHeatmap || {}} />
+      </Card>
     </div>
   );
 };
@@ -230,7 +234,8 @@ export const StartPracticePage = () => {
         difficultyLevel,
       });
       navigate(
-        communicationType === "VOICE" ? `/practice/voice/${data.id}` : `/practice/chat/${data.id}`
+        communicationType === "VOICE" ? `/practice/voice/${data.id}` : `/practice/chat/${data.id}`,
+        { state: { mode, difficultyLevel } }
       );
     } catch {
       toast.error("Failed to create session.");
@@ -321,10 +326,22 @@ export const StartPracticePage = () => {
 export const ChatPracticePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [answer, setAnswer] = useState("");
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [suggestedAnswer, setSuggestedAnswer] = useState("");
+  const [suggestedAnswerLoading, setSuggestedAnswerLoading] = useState(false);
+  const [suggestedAnswerError, setSuggestedAnswerError] = useState("");
+  const [suggestedAnswerCache, setSuggestedAnswerCache] = useState({});
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const [translationPreference, setTranslationPreference] = useState("ENGLISH");
+  const [translatedQuestion, setTranslatedQuestion] = useState("");
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationError, setTranslationError] = useState("");
+  const mode = location.state?.mode || "FRIEND";
+  const difficultyLevel = location.state?.difficultyLevel || "BEGINNER";
 
   useEffect(() => {
     (async () => {
@@ -339,11 +356,48 @@ export const ChatPracticePage = () => {
           },
         ]);
         setConversationId(first.id);
+        setCurrentQuestion(first.aiQuestion || "");
+        setSuggestedAnswer("");
+        setSuggestedAnswerError("");
+        setTranslatedQuestion("");
+        setTranslationError("");
       } catch {
         toast.error("Failed to start conversation");
       }
     })();
   }, [id]);
+
+  useEffect(() => {
+    if (!currentQuestion || !translationPreference || translationPreference === "ENGLISH") {
+      setTranslatedQuestion("");
+      setTranslationError("");
+      return;
+    }
+
+    let cancelled = false;
+    setTranslationLoading(true);
+    setTranslationError("");
+    translateText(currentQuestion, translationPreference)
+      .then(({ translatedText, error }) => {
+        if (!cancelled) {
+          setTranslatedQuestion(translatedText || currentQuestion);
+          setTranslationError(error ? "Showing original English text." : "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTranslatedQuestion(currentQuestion);
+          setTranslationError("");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTranslationLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentQuestion, translationPreference]);
 
   const onSend = async () => {
     setLoading(true);
@@ -361,8 +415,40 @@ export const ChatPracticePage = () => {
       });
       setConversationId(res.nextConversationId ?? res.newConversationId);
       setAnswer("");
+      setSuggestedAnswer("");
+      setSuggestedAnswerError("");
+      setCurrentQuestion(res.nextQuestion || "");
+      setTranslatedQuestion("");
+      setTranslationError("");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onShowSuggestedAnswer = async () => {
+    if (!currentQuestion || suggestedAnswerLoading) return;
+    const cacheKey = `${currentQuestion}|${conversationId || ""}`;
+    if (suggestedAnswerCache[cacheKey]) {
+      setSuggestedAnswer(suggestedAnswerCache[cacheKey]);
+      setSuggestedAnswerError("");
+      return;
+    }
+
+    setSuggestedAnswerLoading(true);
+    setSuggestedAnswerError("");
+    try {
+      const res = await conversationService.getSuggestedAnswer({
+        question: currentQuestion,
+        mode,
+        difficultyLevel,
+      });
+      const answerText = typeof res === "string" ? res : res?.answer || res?.suggestedAnswer || "";
+      setSuggestedAnswer(answerText);
+      setSuggestedAnswerCache((prev) => ({ ...prev, [cacheKey]: answerText }));
+    } catch {
+      setSuggestedAnswerError("Unable to load a suggested answer right now.");
+    } finally {
+      setSuggestedAnswerLoading(false);
     }
   };
 
@@ -385,6 +471,17 @@ export const ChatPracticePage = () => {
       onSend={onSend}
       onEnd={onEnd}
       loading={loading}
+      suggestedAnswer={suggestedAnswer}
+      suggestedAnswerLoading={suggestedAnswerLoading}
+      onShowSuggestedAnswer={onShowSuggestedAnswer}
+      suggestedAnswerError={suggestedAnswerError}
+      translationMode={translationPreference}
+      translatedText={translatedQuestion}
+      translationLabel={getTranslationLabel(translationPreference)}
+      translationLoading={translationLoading}
+      onTranslationChange={setTranslationPreference}
+      translationError={translationError}
+      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH"}
     />
   );
 };
@@ -392,11 +489,19 @@ export const ChatPracticePage = () => {
 export const VoicePracticePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [question, setQuestion] = useState("Loading first AI question...");
   const [conversationId, setConversationId] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
+  const [translationPreference, setTranslationPreference] = useState("ENGLISH");
+  const [translatedQuestion, setTranslatedQuestion] = useState("");
+  const mode = location.state?.mode || "FRIEND";
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationError, setTranslationError] = useState("");
+  const [transcriptValue, setTranscriptValue] = useState("");
   const {
+    transcript,
     displayTranscript,
     listening,
     error,
@@ -406,6 +511,7 @@ export const VoicePracticePage = () => {
     speakSequence,
     stopSpeaking,
     clearTranscript,
+    setTranscript,
   } = useVoicePractice();
 
   useEffect(() => {
@@ -414,6 +520,9 @@ export const VoicePracticePage = () => {
         const first = await conversationService.start(id);
         setConversationId(first.id);
         setQuestion(first.aiQuestion);
+        setTranscriptValue("");
+        setTranslatedQuestion("");
+        setTranslationError("");
         speakText(first.aiQuestion);
       } catch {
         toast.error("Failed to start voice practice");
@@ -425,17 +534,62 @@ export const VoicePracticePage = () => {
     if (error) toast.error(error);
   }, [error]);
 
+  useEffect(() => {
+    if (!question || !translationPreference || translationPreference === "ENGLISH") {
+      setTranslatedQuestion("");
+      setTranslationError("");
+      return;
+    }
+
+    let cancelled = false;
+    setTranslationLoading(true);
+    setTranslationError("");
+    translateText(question, translationPreference)
+      .then(({ translatedText, error }) => {
+        if (!cancelled) {
+          setTranslatedQuestion(translatedText || question);
+          setTranslationError(error ? "Showing original English text." : "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTranslatedQuestion(question);
+          setTranslationError("");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTranslationLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [question, translationPreference]);
+
+  useEffect(() => {
+    if (!displayTranscript?.trim()) {
+      setTranscriptValue(transcript);
+      return;
+    }
+    setTranscriptValue(displayTranscript);
+  }, [displayTranscript, transcript]);
+
   const onSubmit = async () => {
-    if (!displayTranscript?.trim()) return;
+    const finalTranscript = transcriptValue?.trim();
+    if (!finalTranscript) return;
     stopListening();
     setLoading(true);
     setFeedback("");
     try {
-      const res = await conversationService.answer({ conversationId, answer: displayTranscript.trim() });
+      const res = await conversationService.answer({ conversationId, answer: finalTranscript });
       setFeedback(res.feedback || "Answer submitted");
       clearTranscript();
+      setTranscript("");
+      setTranscriptValue("");
       setConversationId(res.newConversationId ?? res.nextConversationId);
       setQuestion(res.nextQuestion);
+      setTranslatedQuestion("");
+      setTranslationError("");
       speakSequence([res.feedback, res.nextQuestion]);
     } catch {
       toast.error("Failed to submit answer");
@@ -468,6 +622,15 @@ export const VoicePracticePage = () => {
       onReplay={() => speakText(question)}
       onSubmit={onSubmit}
       onEnd={onEnd}
+      translationMode={translationPreference}
+      translatedText={translatedQuestion}
+      translationLabel={getTranslationLabel(translationPreference)}
+      translationLoading={translationLoading}
+      onTranslationChange={setTranslationPreference}
+      translationError={translationError}
+      transcriptValue={transcriptValue}
+      onTranscriptChange={setTranscriptValue}
+      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH"}
     />
   );
 };
@@ -511,7 +674,7 @@ export const SessionsPage = () => {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-700">
-                <th className="py-2">Topic</th>
+                <th className="max-w-[250px] py-2">Topic</th>
                 <th>Mode</th>
                 <th>Difficulty</th>
                 <th>Status</th>
@@ -522,7 +685,11 @@ export const SessionsPage = () => {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-slate-100 dark:border-slate-800">
-                  <td className="py-2">{r.topic}</td>
+                  <td className="max-w-[250px] py-2">
+                    <div className="max-w-[250px] overflow-hidden text-ellipsis whitespace-nowrap" title={r.topic || "-"}>
+                      {r.topic || "-"}
+                    </div>
+                  </td>
                   <td>{formatMode(r.mode)}</td>
                   <td>{formatDifficulty(r.difficultyLevel)}</td>
                   <td>
@@ -1075,9 +1242,6 @@ export const ProfilePage = () => {
         </div>
       </Card>
 
-      <Card>
-        <ActivityHeatmap activityHeatmap={analytics?.activityHeatmap || {}} />
-      </Card>
     </div>
   );
 };

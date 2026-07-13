@@ -1,6 +1,6 @@
-import { Mic, Volume2 } from "lucide-react";
+import { Mic, Sparkles, Volume2 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Button, Card, Input } from "../common/UI";
+import { Button, Card } from "../common/UI";
 
 export const ChatWindow = ({
   messages,
@@ -10,6 +10,17 @@ export const ChatWindow = ({
   onEnd,
   loading,
   title = "Chat Practice",
+  suggestedAnswer,
+  suggestedAnswerLoading,
+  onShowSuggestedAnswer,
+  suggestedAnswerError,
+  translationMode,
+  translatedText,
+  translationLabel,
+  translationLoading,
+  onTranslationChange,
+  translationError,
+  showTranslationControls = false,
 }) => {
   const bottomRef = useRef(null);
   useEffect(() => {
@@ -21,6 +32,32 @@ export const ChatWindow = ({
       <Card className="overflow-auto">
         <h2 className="mb-3 text-lg font-semibold">{title}</h2>
         <div className="space-y-4">
+          {showTranslationControls && (
+            <div className="rounded-xl border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+              <label className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-medium">Translation:</span>
+                <select
+                  value={translationMode}
+                  onChange={(e) => onTranslationChange?.(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <option value="ENGLISH">English Only</option>
+                  <option value="HINDI">English + Hindi</option>
+                  <option value="MARATHI">English + Marathi</option>
+                </select>
+              </label>
+              {translationLoading ? (
+                <p className="mt-2 text-sm text-slate-500">Translating question...</p>
+              ) : translationError ? (
+                <p className="mt-2 text-sm text-amber-600">{translationError}</p>
+              ) : translatedText && translatedText !== "ENGLISH" ? (
+                <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {translatedText}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs text-slate-500">{translationLabel}</p>
+            </div>
+          )}
           {messages.map((m) => (
             <div key={m.id}>
               <p className="font-medium text-sky-600">Q: {m.question || m.aiQuestion}</p>
@@ -36,19 +73,33 @@ export const ChatWindow = ({
           <div ref={bottomRef} />
         </div>
       </Card>
-      <Card className="flex gap-2">
-        <Input
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          placeholder="Type your answer..."
-          className="flex-1"
-        />
-        <Button onClick={onSend} disabled={!answer || loading}>
-          Send
-        </Button>
-        <Button variant="danger" onClick={onEnd} disabled={loading}>
-          End Session
-        </Button>
+      <Card className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={onSend} disabled={!answer || loading}>
+            Send
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={onShowSuggestedAnswer}
+            disabled={suggestedAnswerLoading || !messages?.length}
+            className="gap-2"
+          >
+            <Sparkles size={16} />
+            {suggestedAnswerLoading ? "Loading..." : "Show Suggested Answer"}
+          </Button>
+          <Button variant="danger" onClick={onEnd} disabled={loading}>
+            End Session
+          </Button>
+        </div>
+        {suggestedAnswerError && (
+          <p className="text-sm text-rose-500">{suggestedAnswerError}</p>
+        )}
+        {suggestedAnswer && (
+          <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sm text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-200">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600">Suggested Answer</p>
+            <p>{suggestedAnswer}</p>
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -64,6 +115,15 @@ export const VoicePanel = ({
   onReplay,
   onSubmit,
   onEnd,
+  translationMode,
+  translatedText,
+  translationLabel,
+  translationLoading,
+  onTranslationChange,
+  translationError,
+  transcriptValue,
+  onTranscriptChange,
+  showTranslationControls = false,
 }) => (
   <Card className="space-y-5">
     <div className="flex items-center justify-between">
@@ -81,15 +141,43 @@ export const VoicePanel = ({
       <p className="rounded-xl bg-sky-50 p-4 text-slate-700 dark:bg-sky-950/30 dark:text-slate-100">
         {question}
       </p>
+      {showTranslationControls && (
+        <div className="mt-3 space-y-2">
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <span className="font-medium">Translation:</span>
+            <select
+              value={translationMode}
+              onChange={(e) => onTranslationChange?.(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="ENGLISH">English Only</option>
+              <option value="HINDI">English + Hindi</option>
+              <option value="MARATHI">English + Marathi</option>
+            </select>
+          </label>
+          {translationLoading ? (
+            <p className="text-sm text-slate-500">Translating question...</p>
+          ) : translationError ? (
+            <p className="text-sm text-amber-600">{translationError}</p>
+          ) : translatedText && translatedText !== "ENGLISH" ? (
+            <p className="rounded-lg border border-slate-200 bg-white/80 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
+              {translatedText}
+            </p>
+          ) : null}
+          <p className="text-xs text-slate-500">{translationLabel}</p>
+        </div>
+      )}
     </div>
 
     <div>
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Your Transcript</p>
-      <div className="min-h-[80px] rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-700 dark:bg-slate-900">
-        {displayTranscript || (
-          <span className="text-slate-400">Click &quot;Start Speaking&quot; and speak your answer...</span>
-        )}
-      </div>
+      <textarea
+        value={transcriptValue}
+        onChange={(e) => onTranscriptChange?.(e.target.value)}
+        placeholder="Click Start Speaking and speak your answer..."
+        className="min-h-[110px] w-full rounded-xl border border-slate-200 bg-white p-4 text-sm outline-none ring-primary/50 focus:ring dark:border-slate-700 dark:bg-slate-900"
+      />
+      <p className="mt-2 text-xs text-slate-500">You can edit the recognized text before submitting.</p>
     </div>
 
     {feedback && (
@@ -108,7 +196,7 @@ export const VoicePanel = ({
       </Button>
       <Button
         onClick={onSubmit}
-        disabled={!displayTranscript?.trim() || loading}
+        disabled={!transcriptValue?.trim() || loading}
         className="gap-2"
       >
         {loading ? "Submitting..." : "Submit Answer"}

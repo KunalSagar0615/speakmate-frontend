@@ -11,27 +11,28 @@ export const ActivityHeatmap = ({ activityHeatmap = {} }) => {
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startPad = firstDay.getDay();
     const daysInMonth = lastDay.getDate();
+    const leadingDays = firstDay.getDay();
+    const totalCells = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
 
     const cells = [];
-    for (let i = 0; i < startPad; i += 1) cells.push(null);
+    for (let i = 0; i < leadingDays; i += 1) cells.push(null);
     for (let day = 1; day <= daysInMonth; day += 1) {
       const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      cells.push({ day, dateKey, count: activityHeatmap[dateKey] || 0 });
+      cells.push({ day, dateKey, count: Number(activityHeatmap?.[dateKey] || 0) });
     }
+    while (cells.length < totalCells) cells.push(null);
 
     const weekRows = [];
     for (let i = 0; i < cells.length; i += 7) {
       weekRows.push(cells.slice(i, i + 7));
     }
-    while (weekRows.length > 0 && weekRows[weekRows.length - 1].length < 7) {
-      weekRows[weekRows.length - 1].push(null);
-    }
 
-    const monthTotal = Object.entries(activityHeatmap).reduce((sum, [date, count]) => {
-      const d = new Date(date);
-      if (d.getFullYear() === year && d.getMonth() === month) return sum + count;
+    const monthTotal = Object.entries(activityHeatmap || {}).reduce((sum, [date, count]) => {
+      const dateValue = new Date(date);
+      if (dateValue.getFullYear() === year && dateValue.getMonth() === month) {
+        return sum + Number(count || 0);
+      }
       return sum;
     }, 0);
 
@@ -53,7 +54,7 @@ export const ActivityHeatmap = ({ activityHeatmap = {} }) => {
   const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 
   return (
-    <div className="mx-auto w-full max-w-md lg:max-w-lg">
+    <div className="mx-auto w-full">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">
@@ -83,18 +84,18 @@ export const ActivityHeatmap = ({ activityHeatmap = {} }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto sm:overflow-visible">
-        <div className="min-w-[240px] sm:min-w-0">
-          <div className="mb-0.5 grid grid-cols-7 gap-0.5 sm:gap-1">
-            {dayLabels.map((label, i) => (
-              <div key={`${label}-${i}`} className="text-center text-[9px] text-slate-400 sm:text-[10px]">
+      <div className="overflow-x-auto pb-1">
+        <div className="min-w-[280px]">
+          <div className="mb-1 grid grid-cols-7 gap-1">
+            {dayLabels.map((label, index) => (
+              <div key={`${label}-${index}`} className="text-center text-[10px] text-slate-400">
                 {label}
               </div>
             ))}
           </div>
-          {weeks.map((week, wi) => (
-            <div key={wi} className="mb-0.5 grid grid-cols-7 gap-0.5 sm:gap-1">
-              {week.map((cell, ci) =>
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="mb-1 grid grid-cols-7 gap-1">
+              {week.map((cell, cellIndex) =>
                 cell ? (
                   <div
                     key={cell.dateKey}
@@ -111,7 +112,7 @@ export const ActivityHeatmap = ({ activityHeatmap = {} }) => {
                     </div>
                   </div>
                 ) : (
-                  <div key={`empty-${wi}-${ci}`} className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <div key={`empty-${weekIndex}-${cellIndex}`} className="h-5 w-5 sm:h-6 sm:w-6" />
                 )
               )}
             </div>
