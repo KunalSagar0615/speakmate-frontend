@@ -33,7 +33,7 @@ export const TypingAnimation = ({ phrases = DEFAULT_PHRASES, className = "" }) =
   }, [displayText, isDeleting, phraseIndex, phrases]);
 
   return (
-    <span className={`inline-block min-h-[1.2em] ${className}`}>
+    <span className={`block w-full min-h-[1.2em] ${className}`}>
       {displayText}
       <span className="ml-1 inline-block w-[3px] animate-pulse bg-current align-middle">&nbsp;</span>
     </span>

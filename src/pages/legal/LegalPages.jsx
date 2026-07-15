@@ -1,6 +1,6 @@
 import { ExternalLink, Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Footer } from "../../components/common/Footer";
+import LandingFooter from "../../components/landing/LandingFooter";
 import { TypingAnimation } from "../../components/common/TypingAnimation";
 import { Button, Card, ThemeToggle } from "../../components/common/UI";
 import { FOUNDER_PROFILE_IMAGE } from "../../utils/constants";
@@ -21,7 +21,7 @@ const PageShell = ({ children }) => (
       <ThemeToggle />
     </header>
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 pb-12">{children}</main>
-    <Footer />
+    <LandingFooter />
   </div>
 );
 
