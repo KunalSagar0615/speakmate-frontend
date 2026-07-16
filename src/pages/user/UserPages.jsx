@@ -16,7 +16,7 @@ import { translateText, getTranslationLabel } from "../../utils/translation";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ActivityHeatmap } from "../../components/charts/ActivityHeatmap";
-import { PracticeTrendChart, WeeklyActivityChart } from "../../components/charts/DashboardCharts";
+import { DashboardHero } from "../../components/charts/DashboardCharts";
 import { RadioGroup } from "../../components/common/RadioGroup";
 import { Button, Card, Input, Loader, StatCard } from "../../components/common/UI";
 import { ChatWindow, VoicePanel } from "../../components/practice/PracticeComponents";
@@ -182,17 +182,16 @@ export const UserDashboardPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard title="Total Sessions" value={analytics?.totalSessions ?? 0} />
-        <StatCard title="Completed Sessions" value={completedSessions} />
-        <StatCard title="Current Streak" value={`${analytics?.currentStreak ?? 0} days`} />
-        <StatCard title="Practice Days" value={analytics?.totalPracticeDays ?? 0} />
-        <StatCard title="Reports Generated" value={analytics?.reportsGenerated ?? 0} />
-      </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <WeeklyActivityChart sessions={sessions} loading={loading} />
-        <PracticeTrendChart sessions={sessions} loading={loading} />
-      </div>
+      <DashboardHero
+        stats={{
+          currentStreak: analytics?.currentStreak ?? 0,
+          totalSessions: analytics?.totalSessions ?? 0,
+          practiceDays: analytics?.totalPracticeDays ?? 0,
+          reportsGenerated: analytics?.reportsGenerated ?? 0,
+        }}
+        userName="Kunal"
+        onStartPractice={() => navigate("/practice")}
+      />
       <Card className="w-full">
         <ActivityHeatmap activityHeatmap={analytics?.activityHeatmap || {}} />
       </Card>
@@ -900,11 +899,10 @@ export const ReportsPage = () => {
           {reportSessions.map((session) => (
             <Card
               key={session.id}
-              className={`cursor-pointer transition hover:ring-2 hover:ring-primary/30 ${
-                String(selectedSessionId) === String(session.id)
+              className={`cursor-pointer transition hover:ring-2 hover:ring-primary/30 ${String(selectedSessionId) === String(session.id)
                   ? "ring-2 ring-primary"
                   : ""
-              }`}
+                }`}
               onClick={() => handleSelectSession(session)}
             >
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">
@@ -1148,9 +1146,8 @@ export const ProfilePage = () => {
           <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-slate-500">Email Verified</span>
             <span
-              className={`inline-flex items-center gap-1 font-medium ${
-                verified ? "text-emerald-600" : "text-amber-600"
-              }`}
+              className={`inline-flex items-center gap-1 font-medium ${verified ? "text-emerald-600" : "text-amber-600"
+                }`}
             >
               {verified ? (
                 <>
@@ -1271,11 +1268,10 @@ export const SettingsPage = () => {
             <button
               type="button"
               onClick={() => setTheme("light")}
-              className={`flex items-center gap-3 rounded-xl border p-4 transition ${
-                theme === "light"
+              className={`flex items-center gap-3 rounded-xl border p-4 transition ${theme === "light"
                   ? "border-primary bg-sky-50 ring-2 ring-primary/30 dark:bg-sky-950/30"
                   : "border-slate-200 dark:border-slate-700"
-              }`}
+                }`}
             >
               <Sun size={20} className="text-amber-500" />
               <span>
@@ -1286,11 +1282,10 @@ export const SettingsPage = () => {
             <button
               type="button"
               onClick={() => setTheme("dark")}
-              className={`flex items-center gap-3 rounded-xl border p-4 transition ${
-                theme === "dark"
+              className={`flex items-center gap-3 rounded-xl border p-4 transition ${theme === "dark"
                   ? "border-primary bg-sky-50 ring-2 ring-primary/30 dark:bg-sky-950/30"
                   : "border-slate-200 dark:border-slate-700"
-              }`}
+                }`}
             >
               <Moon size={20} className="text-indigo-400" />
               <span>
