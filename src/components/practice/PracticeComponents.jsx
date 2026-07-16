@@ -1,7 +1,6 @@
 import { Mic, Sparkles, Volume2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button, Card } from "../common/UI";
-
 export const ChatWindow = ({
   messages,
   answer,
@@ -23,80 +22,164 @@ export const ChatWindow = ({
   showTranslationControls = false,
 }) => {
   const bottomRef = useRef(null);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  const latestMessage = messages?.[messages.length - 1];
 
   return (
     <div className="grid h-[80vh] grid-rows-[1fr_auto] gap-3">
       <Card className="overflow-auto">
         <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+
         <div className="space-y-4">
-          {showTranslationControls && (
-            <div className="rounded-xl border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/70">
-              <label className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-medium">Translation:</span>
-                <select
-                  value={translationMode}
-                  onChange={(e) => onTranslationChange?.(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
-                >
-                  <option value="ENGLISH">English Only</option>
-                  <option value="HINDI">English + Hindi</option>
-                  <option value="MARATHI">English + Marathi</option>
-                </select>
-              </label>
-              {translationLoading ? (
-                <p className="mt-2 text-sm text-slate-500">Translating question...</p>
-              ) : translationError ? (
-                <p className="mt-2 text-sm text-amber-600">{translationError}</p>
-              ) : translatedText && translatedText !== "ENGLISH" ? (
-                <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  {translatedText}
-                </p>
-              ) : null}
-              <p className="mt-2 text-xs text-slate-500">{translationLabel}</p>
-            </div>
+          {messages.map((m, index) => {
+            const isLatestQuestion = index === messages.length - 1;
+
+            return (
+              <div key={m.id} className="space-y-1">
+                {/* Question */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="text-lg font-medium text-sky-500 leading-tight">
+                      {m.question || m.aiQuestion}
+                    </p>
+
+                    {isLatestQuestion &&
+                      showTranslationControls &&
+                      translationMode !== "ENGLISH" && (
+                        <>
+                          {translationLoading ? (
+                            <p className="text-sm text-slate-400 leading-tight">
+                              Translating...
+                            </p>
+                          ) : (
+                            translatedText && (
+                              <p className="text-sm text-slate-400 leading-tight">
+                                {translatedText}
+                              </p>
+                            )
+                          )}
+                        </>
+                      )}
+                  </div>
+
+                  {isLatestQuestion && showTranslationControls && (
+                    <select
+                      value={translationMode}
+                      onChange={(e) =>
+                        onTranslationChange?.(e.target.value)
+                      }
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <option value="ENGLISH">English Only</option>
+                      <option value="HINDI">English + Hindi</option>
+                      <option value="MARATHI">English + Marathi</option>
+                    </select>
+                  )}
+                </div>
+
+                {isLatestQuestion && translationError && (
+                  <p className="text-xs text-amber-600">
+                    {translationError}
+                  </p>
+                )}
+
+                {/* User Answer */}
+                {(m.answer || m.userAnswer) && (
+                  <p className="text-slate-200">
+                    <span className="font-medium">A:</span>{" "}
+                    {m.answer || m.userAnswer}
+                  </p>
+                )}
+
+                {/* Feedback */}
+                {(m.feedback || m.aiFeedback) && (
+                  <p className="text-emerald-500">
+                    <span className="font-medium">Feedback:</span>{" "}
+                    {m.feedback || m.aiFeedback}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+
+          {loading && (
+            <p className="animate-pulse text-slate-500">
+              AI is thinking...
+            </p>
           )}
-          {messages.map((m) => (
-            <div key={m.id}>
-              <p className="font-medium text-sky-600">Q: {m.question || m.aiQuestion}</p>
 
-              {(m.answer || m.userAnswer) && <p className="mt-1">A: {m.answer || m.userAnswer}</p>}
-
-              {(m.feedback || m.aiFeedback) && (
-                <p className="mt-1 text-emerald-600">Feedback: {m.feedback || m.aiFeedback}</p>
-              )}
-            </div>
-          ))}
-          {loading && <p className="animate-pulse text-slate-500">AI is thinking...</p>}
           <div ref={bottomRef} />
         </div>
       </Card>
+
       <Card className="space-y-3">
+        {/* Answer Box */}
+        <textarea
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          placeholder="Type your answer here..."
+          rows={4}
+          className="
+            min-h-[110px]
+            w-full
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-4
+            text-sm
+            outline-none
+            ring-primary/50
+            focus:ring
+            dark:border-slate-700
+            dark:bg-slate-900
+          "
+        />
+
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={onSend} disabled={!answer || loading}>
+          <Button onClick={onSend} disabled={!answer?.trim() || loading}>
             Send
           </Button>
+
           <Button
             variant="secondary"
             onClick={onShowSuggestedAnswer}
-            disabled={suggestedAnswerLoading || !messages?.length}
+            disabled={
+              suggestedAnswerLoading ||
+              !latestMessage?.aiQuestion
+            }
             className="gap-2"
           >
             <Sparkles size={16} />
-            {suggestedAnswerLoading ? "Loading..." : "Show Suggested Answer"}
+            {suggestedAnswerLoading
+              ? "Loading..."
+              : "Show Suggested Answer"}
           </Button>
-          <Button variant="danger" onClick={onEnd} disabled={loading}>
+
+          <Button
+            variant="danger"
+            onClick={onEnd}
+            disabled={loading}
+          >
             End Session
           </Button>
         </div>
+
         {suggestedAnswerError && (
-          <p className="text-sm text-rose-500">{suggestedAnswerError}</p>
+          <p className="text-sm text-rose-500">
+            {suggestedAnswerError}
+          </p>
         )}
+
         {suggestedAnswer && (
           <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sm text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-200">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600">Suggested Answer</p>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600">
+              Suggested Answer
+            </p>
             <p>{suggestedAnswer}</p>
           </div>
         )}
@@ -104,7 +187,6 @@ export const ChatWindow = ({
     </div>
   );
 };
-
 export const VoicePanel = ({
   question,
   displayTranscript,

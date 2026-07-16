@@ -51,83 +51,95 @@ export const ActivityHeatmap = ({ activityHeatmap = {} }) => {
     return "bg-sky-600 dark:bg-sky-500";
   };
 
-  const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-
   return (
-    <div className="mx-auto w-full">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <div className="mx-auto max-w-4xl">
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+          <h3 className="text-base font-semibold text-slate-100">
             Activity Heatmap
           </h3>
-          <p className="text-[11px] text-slate-500">{monthStats} sessions this month</p>
+          <p className="text-xs text-slate-400">
+            {monthStats} sessions this month
+          </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+
+        <div className="flex items-center gap-2">
           <button
-            type="button"
             onClick={() => setMonthOffset((m) => m + 1)}
-            className="rounded-md border border-slate-200 p-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            aria-label="Previous month"
+            className="rounded-md border border-slate-700 p-1 hover:bg-slate-800"
           >
             <ChevronLeft size={14} />
           </button>
-          <span className="min-w-[110px] text-center text-xs font-medium">{monthLabel}</span>
+
+          <span className="min-w-[120px] text-center text-sm font-medium">
+            {monthLabel}
+          </span>
+
           <button
-            type="button"
             onClick={() => setMonthOffset((m) => Math.max(0, m - 1))}
             disabled={monthOffset === 0}
-            className="rounded-md border border-slate-200 p-1 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
-            aria-label="Next month"
+            className="rounded-md border border-slate-700 p-1 hover:bg-slate-800 disabled:opacity-40"
           >
             <ChevronRight size={14} />
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="min-w-[280px]">
-          <div className="mb-1 grid grid-cols-7 gap-1">
-            {dayLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="text-center text-[10px] text-slate-400">
-                {label}
+      <div className="flex justify-center overflow-x-auto">
+        <div className="inline-flex flex-col">
+          {/* Days */}
+          <div className="grid grid-cols-7 gap-2 mb-3">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div
+                key={day}
+                className="h-10 w-10 flex items-center justify-center text-xs font-medium text-slate-400"
+              >
+                {day}
               </div>
             ))}
           </div>
-          {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="mb-1 grid grid-cols-7 gap-1">
-              {week.map((cell, cellIndex) =>
-                cell ? (
-                  <div
-                    key={cell.dateKey}
-                    title={`${cell.dateKey}: ${cell.count} session${cell.count !== 1 ? "s" : ""}`}
-                    className={`group relative h-5 w-5 rounded-sm sm:h-6 sm:w-6 sm:rounded-md ${getIntensity(cell.count)} transition hover:ring-1 hover:ring-primary/50`}
+
+          {/* Calendar Heatmap */}
+          <div className="grid grid-cols-7 gap-2">
+            {weeks.flat().map((cell, index) =>
+              cell ? (
+                <div
+                  key={cell.dateKey}
+                  title={`${cell.dateKey}: ${cell.count} sessions`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:scale-105 hover:ring-1 hover:ring-sky-400 ${getIntensity(
+                    cell.count
+                  )}`}
+                >
+                  <span
+                    className={`text-xs font-medium ${cell.count > 0
+                      ? "text-white"
+                      : "text-slate-500"
+                      }`}
                   >
-                    <span className="sr-only">
-                      {cell.dateKey}: {cell.count} sessions
-                    </span>
-                    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] text-white group-hover:block dark:bg-slate-700">
-                      {cell.dateKey}
-                      <br />
-                      {cell.count} session{cell.count !== 1 ? "s" : ""}
-                    </div>
-                  </div>
-                ) : (
-                  <div key={`empty-${weekIndex}-${cellIndex}`} className="h-5 w-5 sm:h-6 sm:w-6" />
-                )
-              )}
-            </div>
-          ))}
+                    {cell.day}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  key={`empty-${index}`}
+                  className="h-10 w-10"
+                />
+              )
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-0.5 text-[9px] text-slate-500 sm:text-[10px]">
+      <div className="mt-4 flex items-center justify-end gap-1 text-[10px] text-slate-500">
         <span>Less</span>
-        {[0, 1, 2, 3, 5].map((level) => (
+
+        {[0, 1, 2, 3, 6].map((level) => (
           <div
             key={level}
-            className={`h-2.5 w-2.5 rounded-sm sm:h-3 sm:w-3 ${getIntensity(level === 0 ? 0 : level === 1 ? 1 : level === 2 ? 2 : level === 3 ? 3 : 6)}`}
+            className={`h-3 w-3 rounded-sm ${getIntensity(level)}`}
           />
         ))}
+
         <span>More</span>
       </div>
     </div>
