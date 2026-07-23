@@ -335,6 +335,7 @@ export const ChatPracticePage = () => {
   const [suggestedAnswerError, setSuggestedAnswerError] = useState("");
   const [suggestedAnswerCache, setSuggestedAnswerCache] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState("");
+  const [questionNumber, setQuestionNumber] = useState(1);
   const [translationPreference, setTranslationPreference] = useState("ENGLISH");
   const [translatedQuestion, setTranslatedQuestion] = useState("");
   const [translationLoading, setTranslationLoading] = useState(false);
@@ -356,6 +357,7 @@ export const ChatPracticePage = () => {
         ]);
         setConversationId(first.id);
         setCurrentQuestion(first.aiQuestion || "");
+        setQuestionNumber(1);
         setSuggestedAnswer("");
         setSuggestedAnswerError("");
         setTranslatedQuestion("");
@@ -417,6 +419,7 @@ export const ChatPracticePage = () => {
       setSuggestedAnswer("");
       setSuggestedAnswerError("");
       setCurrentQuestion(res.nextQuestion || "");
+      setQuestionNumber((prev) => prev + 1);
       setTranslatedQuestion("");
       setTranslationError("");
     } finally {
@@ -480,7 +483,7 @@ export const ChatPracticePage = () => {
       translationLoading={translationLoading}
       onTranslationChange={setTranslationPreference}
       translationError={translationError}
-      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH"}
+      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH" || mode === "INTERVIEW"}
     />
   );
 };
@@ -490,11 +493,16 @@ export const VoicePracticePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [question, setQuestion] = useState("Loading first AI question...");
+  const [questionNumber, setQuestionNumber] = useState(1);
   const [conversationId, setConversationId] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
   const [translationPreference, setTranslationPreference] = useState("ENGLISH");
   const [translatedQuestion, setTranslatedQuestion] = useState("");
+  const [suggestedAnswer, setSuggestedAnswer] = useState("");
+  const [suggestedAnswerLoading, setSuggestedAnswerLoading] = useState(false);
+  const [suggestedAnswerError, setSuggestedAnswerError] = useState("");
+  const [suggestedAnswerCache, setSuggestedAnswerCache] = useState({});
   const mode = location.state?.mode || "FRIEND";
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState("");
@@ -519,6 +527,7 @@ export const VoicePracticePage = () => {
         const first = await conversationService.start(id);
         setConversationId(first.id);
         setQuestion(first.aiQuestion);
+        setQuestionNumber(1);
         setTranscriptValue("");
         setTranslatedQuestion("");
         setTranslationError("");
@@ -573,6 +582,33 @@ export const VoicePracticePage = () => {
     setTranscriptValue(displayTranscript);
   }, [displayTranscript, transcript]);
 
+  const onShowSuggestedAnswer = async () => {
+    if (!question || suggestedAnswerLoading) return;
+    const cacheKey = `${question}|${conversationId || ""}`;
+    if (suggestedAnswerCache[cacheKey]) {
+      setSuggestedAnswer(suggestedAnswerCache[cacheKey]);
+      setSuggestedAnswerError("");
+      return;
+    }
+
+    setSuggestedAnswerLoading(true);
+    setSuggestedAnswerError("");
+    try {
+      const res = await conversationService.getSuggestedAnswer({
+        question,
+        mode,
+        difficultyLevel: location.state?.difficultyLevel || "BEGINNER",
+      });
+      const answerText = typeof res === "string" ? res : res?.answer || res?.suggestedAnswer || "";
+      setSuggestedAnswer(answerText);
+      setSuggestedAnswerCache((prev) => ({ ...prev, [cacheKey]: answerText }));
+    } catch {
+      setSuggestedAnswerError("Unable to load a suggested answer right now.");
+    } finally {
+      setSuggestedAnswerLoading(false);
+    }
+  };
+
   const onSubmit = async () => {
     const finalTranscript = transcriptValue?.trim();
     if (!finalTranscript) return;
@@ -587,6 +623,7 @@ export const VoicePracticePage = () => {
       setTranscriptValue("");
       setConversationId(res.newConversationId ?? res.nextConversationId);
       setQuestion(res.nextQuestion);
+      setQuestionNumber((prev) => prev + 1);
       setTranslatedQuestion("");
       setTranslationError("");
       speakSequence([res.feedback, res.nextQuestion]);
@@ -613,6 +650,7 @@ export const VoicePracticePage = () => {
   return (
     <VoicePanel
       question={question}
+      questionNumber={questionNumber}
       displayTranscript={displayTranscript}
       listening={listening}
       feedback={feedback}
@@ -629,7 +667,11 @@ export const VoicePracticePage = () => {
       translationError={translationError}
       transcriptValue={transcriptValue}
       onTranscriptChange={setTranscriptValue}
-      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH"}
+      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH" || mode === "INTERVIEW"}
+      suggestedAnswer={suggestedAnswer}
+      suggestedAnswerLoading={suggestedAnswerLoading}
+      onShowSuggestedAnswer={onShowSuggestedAnswer}
+      suggestedAnswerError={suggestedAnswerError}
     />
   );
 };

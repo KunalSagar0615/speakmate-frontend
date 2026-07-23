@@ -30,61 +30,54 @@ export const ChatWindow = ({
   const latestMessage = messages?.[messages.length - 1];
 
   return (
-    <div className="grid h-[80vh] grid-rows-[1fr_auto] gap-3">
-      <Card className="overflow-auto">
-        <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+    <div className="grid h-[80vh] grid-rows-[1fr_auto] gap-2">
+      <Card className="overflow-auto p-4">
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          {showTranslationControls && (
+            <select
+              value={translationMode}
+              onChange={(e) => onTranslationChange?.(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="ENGLISH">English Only</option>
+              <option value="HINDI">English + Hindi</option>
+              <option value="MARATHI">English + Marathi</option>
+            </select>
+          )}
+        </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {messages.map((m, index) => {
             const isLatestQuestion = index === messages.length - 1;
 
             return (
               <div key={m.id} className="space-y-1">
                 {/* Question */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <p className="text-lg font-medium text-sky-500 leading-tight">
-                      {m.question || m.aiQuestion}
-                    </p>
-
-                    {isLatestQuestion &&
-                      showTranslationControls &&
-                      translationMode !== "ENGLISH" && (
-                        <>
-                          {translationLoading ? (
-                            <p className="text-sm text-slate-400 leading-tight">
-                              Translating...
-                            </p>
-                          ) : (
-                            translatedText && (
-                              <p className="text-sm text-slate-400 leading-tight">
-                                {translatedText}
-                              </p>
-                            )
-                          )}
-                        </>
-                      )}
-                  </div>
+                <div className="rounded-xl bg-sky-50 p-3 dark:bg-sky-950/30">
+                  <p className="text-lg font-medium text-sky-500 leading-tight">
+                    Q {index + 1}) {m.question || m.aiQuestion}
+                  </p>
 
                   {isLatestQuestion && showTranslationControls && (
-                    <select
-                      value={translationMode}
-                      onChange={(e) =>
-                        onTranslationChange?.(e.target.value)
-                      }
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
-                    >
-                      <option value="ENGLISH">English Only</option>
-                      <option value="HINDI">English + Hindi</option>
-                      <option value="MARATHI">English + Marathi</option>
-                    </select>
+                    <div className="mt-2 space-y-2">
+                      {translationLoading ? (
+                        <p className="text-sm text-slate-500 leading-tight">
+                          Translating...
+                        </p>
+                      ) : translationError ? (
+                        <p className="text-sm text-amber-600">{translationError}</p>
+                      ) : translationMode !== "ENGLISH" && translatedText ? (
+                        <p className="rounded-lg border border-slate-200 bg-white/80 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
+                          {translatedText}
+                        </p>
+                      ) : null}
+                    </div>
                   )}
                 </div>
 
                 {isLatestQuestion && translationError && (
-                  <p className="text-xs text-amber-600">
-                    {translationError}
-                  </p>
+                  <p className="text-xs text-amber-600">{translationError}</p>
                 )}
 
                 {/* User Answer */}
@@ -116,7 +109,7 @@ export const ChatWindow = ({
         </div>
       </Card>
 
-      <Card className="space-y-3">
+      <Card className="space-y-2 p-3">
         {/* Answer Box */}
         <textarea
           value={answer}
@@ -189,6 +182,7 @@ export const ChatWindow = ({
 };
 export const VoicePanel = ({
   question,
+  questionNumber,
   displayTranscript,
   listening,
   feedback,
@@ -206,37 +200,42 @@ export const VoicePanel = ({
   transcriptValue,
   onTranscriptChange,
   showTranslationControls = false,
+  suggestedAnswer,
+  suggestedAnswerLoading,
+  onShowSuggestedAnswer,
+  suggestedAnswerError,
 }) => (
-  <Card className="space-y-5">
-    <div className="flex items-center justify-between">
+  <Card className="space-y-3 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <h2 className="text-lg font-semibold">Voice Practice</h2>
-      {listening && (
-        <span className="inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-600 dark:bg-rose-900/40 dark:text-rose-300">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          Listening...
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {showTranslationControls && (
+          <select
+            value={translationMode}
+            onChange={(e) => onTranslationChange?.(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
+          >
+            <option value="ENGLISH">English Only</option>
+            <option value="HINDI">English + Hindi</option>
+            <option value="MARATHI">English + Marathi</option>
+          </select>
+        )}
+        {listening && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-600 dark:bg-rose-900/40 dark:text-rose-300">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
+            Listening...
+          </span>
+        )}
+      </div>
     </div>
 
-    <div>
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">AI Question</p>
-      <p className="rounded-xl bg-sky-50 p-4 text-slate-700 dark:bg-sky-950/30 dark:text-slate-100">
-        {question}
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-slate-500">AI Question</p>
+      <p className="rounded-xl bg-sky-50 p-3 text-slate-700 dark:bg-sky-950/30 dark:text-slate-100">
+        Q {questionNumber}) {question}
       </p>
       {showTranslationControls && (
-        <div className="mt-3 space-y-2">
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <span className="font-medium">Translation:</span>
-            <select
-              value={translationMode}
-              onChange={(e) => onTranslationChange?.(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900"
-            >
-              <option value="ENGLISH">English Only</option>
-              <option value="HINDI">English + Hindi</option>
-              <option value="MARATHI">English + Marathi</option>
-            </select>
-          </label>
+        <div className="space-y-2">
           {translationLoading ? (
             <p className="text-sm text-slate-500">Translating question...</p>
           ) : translationError ? (
@@ -246,7 +245,6 @@ export const VoicePanel = ({
               {translatedText}
             </p>
           ) : null}
-          <p className="text-xs text-slate-500">{translationLabel}</p>
         </div>
       )}
     </div>
@@ -271,7 +269,7 @@ export const VoicePanel = ({
       </div>
     )}
 
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button onClick={onStart} disabled={listening || loading} className="gap-2">
         <Mic size={16} />
         Start Speaking
@@ -283,6 +281,15 @@ export const VoicePanel = ({
       >
         {loading ? "Submitting..." : "Submit Answer"}
       </Button>
+      <Button
+        variant="secondary"
+        onClick={onShowSuggestedAnswer}
+        disabled={suggestedAnswerLoading || !question?.trim()}
+        className="gap-2"
+      >
+        <Sparkles size={16} />
+        {suggestedAnswerLoading ? "Loading..." : "💡 Suggested Answer"}
+      </Button>
       <Button variant="secondary" onClick={onReplay} disabled={loading} className="gap-2">
         <Volume2 size={16} />
         Replay AI Voice
@@ -291,5 +298,18 @@ export const VoicePanel = ({
         End Session
       </Button>
     </div>
+
+    {suggestedAnswerError && (
+      <p className="text-sm text-rose-500">{suggestedAnswerError}</p>
+    )}
+
+    {suggestedAnswer && (
+      <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sm text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-200">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-600">
+          Suggested Answer
+        </p>
+        <p>{suggestedAnswer}</p>
+      </div>
+    )}
   </Card>
 );
