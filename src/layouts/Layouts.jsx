@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Settings,
   Shield,
+  Sparkles,
   Users,
   Waves,
 } from "lucide-react";
@@ -51,6 +52,7 @@ const Sidebar = ({ links }) => {
 const linksUser = [
   { to: "/dashboard", icon: Home, label: "Dashboard" },
   { to: "/practice", icon: MessageCircle, label: "Start Practice" },
+  { to: "/custom-practice", icon: Sparkles, label: "Custom Practice" },
   { to: "/sessions", icon: Waves, label: "Sessions" },
   { to: "/reports", icon: FileBarChart2, label: "Reports" },
   { to: "/profile", icon: BookUser, label: "Profile" },

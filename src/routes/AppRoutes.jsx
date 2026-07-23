@@ -16,6 +16,10 @@ import {
   VoicePracticePage,
 } from "../pages/user/UserPages";
 import { AdminRoute, ProtectedRoute } from "./RouteGuards";
+import { CustomPracticeHome } from "../pages/custom-practice/CustomPracticeHome";
+import { CustomPracticeReport } from "../pages/custom-practice/CustomPracticeReport";
+import { CustomPracticeSession } from "../pages/custom-practice/CustomPracticeSession";
+import { CustomPracticeSetup } from "../pages/custom-practice/CustomPracticeSetup";
 
 export default function AppRoutes() {
   return (
@@ -36,6 +40,10 @@ export default function AppRoutes() {
           <Route path="/practice" element={<StartPracticePage />} />
           <Route path="/practice/chat/:id" element={<ChatPracticePage />} />
           <Route path="/practice/voice/:id" element={<VoicePracticePage />} />
+          <Route path="/custom-practice" element={<CustomPracticeHome />} />
+          <Route path="/custom-practice/new" element={<CustomPracticeSetup />} />
+          <Route path="/custom-practice/session/:sessionId" element={<CustomPracticeSession />} />
+          <Route path="/custom-practice/report/:sessionId" element={<CustomPracticeReport />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/sessions/:id" element={<SessionDetailsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
