@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  Bot,
   LogOut,
   Settings,
   Shield,
@@ -10,6 +9,7 @@ import {
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SidebarLink } from "../components/common/UI";
+import speakMateLogo from "../assets/speakmate-logo.png";
 
 /* =========================================================
    AUTH LAYOUT
@@ -37,9 +37,11 @@ const UserNavbar = () => {
           to="/dashboard"
           className="group flex items-center gap-3"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm shadow-sky-500/20 transition group-hover:scale-105">
-            <Bot size={22} strokeWidth={2.2} />
-          </div>
+          <img
+            src={speakMateLogo}
+            alt="SpeakMate"
+            className="h-10 w-10 rounded-md object-cover shadow-sm transition duration-200 group-hover:scale-105"
+          />
 
           <div className="leading-tight">
             <p className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -64,7 +66,7 @@ const UserNavbar = () => {
             className="transition-transform duration-300 group-hover:rotate-45"
           />
         </Link>
-    </div>
+      </div>
     </header >
   );
 };
@@ -79,7 +81,11 @@ const UserFooter = () => {
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 sm:flex-row sm:px-6 lg:px-8">
 
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-          <Bot size={16} className="text-sky-500" />
+          <img
+            src={speakMateLogo}
+            alt="SpeakMate"
+            className="h-6 w-6 rounded-sm object-cover"
+          />
           <span>SpeakMate AI Friend</span>
         </div>
 
