@@ -16,6 +16,8 @@ import {
   GraduationCap,
   Globe2,
   MessageSquare,
+  Volume2,
+  Play,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { translateText, getTranslationLabel } from "../../utils/translation";
@@ -1129,6 +1131,7 @@ export const ProfilePage = () => {
 
 export const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
+
   const {
     user: cachedUser,
     setUser,
@@ -1141,6 +1144,15 @@ export const SettingsPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
+
+  // =========================================================
+  // VOICE SETTINGS
+  // =========================================================
+
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(
+    () => localStorage.getItem("speakmate-voice") || ""
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1165,7 +1177,9 @@ export const SettingsPage = () => {
           if (cancelled) return;
 
           setProfile(cachedUser || null);
-          setProfileError("Unable to refresh profile information.");
+          setProfileError(
+            "Unable to refresh profile information."
+          );
         });
 
       const analyticsPromise = dashboardService
@@ -1198,9 +1212,116 @@ export const SettingsPage = () => {
     };
   }, []);
 
-  const verified = isEmailVerified(profile?.emailVerified);
+  // =========================================================
+  // LOAD BROWSER VOICES
+  // =========================================================
+
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    const loadVoices = () => {
+      const voices = window.speechSynthesis
+        .getVoices()
+        .filter((voice) =>
+          voice.lang?.toLowerCase().startsWith("en")
+        );
+
+      setAvailableVoices(voices);
+
+      /*
+       * If the user has never selected a voice,
+       * choose a reasonable English default.
+       */
+      if (!selectedVoice && voices.length > 0) {
+        const defaultVoice =
+          voices.find((voice) => voice.default) ||
+          voices[0];
+
+        setSelectedVoice(defaultVoice.name);
+
+        localStorage.setItem(
+          "speakmate-voice",
+          defaultVoice.name
+        );
+      }
+    };
+
+    loadVoices();
+
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      loadVoices
+    );
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        "voiceschanged",
+        loadVoices
+      );
+    };
+  }, []);
+
+  // =========================================================
+  // CHANGE VOICE
+  // =========================================================
+
+  const handleVoiceChange = (event) => {
+    const voiceName = event.target.value;
+
+    setSelectedVoice(voiceName);
+
+    localStorage.setItem(
+      "speakmate-voice",
+      voiceName
+    );
+  };
+
+  // =========================================================
+  // PREVIEW VOICE
+  // =========================================================
+
+  const handlePreviewVoice = () => {
+    if (!("speechSynthesis" in window)) {
+      toast.error(
+        "Text-to-speech is not supported in this browser."
+      );
+      return;
+    }
+
+    const voice = availableVoices.find(
+      (item) => item.name === selectedVoice
+    );
+
+    if (!voice) {
+      toast.error("Please select a voice.");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(
+      "Hello! I'm your SpeakMate practice partner. Let's improve your English together."
+    );
+
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // =========================================================
+  // PROFILE
+  // =========================================================
+
+  const verified = isEmailVerified(
+    profile?.emailVerified
+  );
 
   const handleLogout = () => {
+    window.speechSynthesis?.cancel();
+
     logout();
     navigate("/login");
   };
@@ -1258,7 +1379,8 @@ export const SettingsPage = () => {
         </h1>
 
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Manage your profile and personalize your SpeakMate experience.
+          Manage your profile and personalize your
+          SpeakMate experience.
         </p>
       </section>
 
@@ -1275,6 +1397,7 @@ export const SettingsPage = () => {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
 
         <div className="relative overflow-hidden px-5 py-6 sm:px-7">
+
           <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-sky-100 blur-3xl dark:bg-sky-950/40" />
 
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -1286,8 +1409,11 @@ export const SettingsPage = () => {
             <div className="min-w-0 flex-1">
 
               <div className="flex flex-wrap items-center gap-2">
+
                 <h2 className="truncate text-xl font-bold text-slate-900 dark:text-white">
-                  {profile?.name || profile?.username || "SpeakMate User"}
+                  {profile?.name ||
+                    profile?.username ||
+                    "SpeakMate User"}
                 </h2>
 
                 {verified && (
@@ -1296,6 +1422,7 @@ export const SettingsPage = () => {
                     Verified
                   </span>
                 )}
+
               </div>
 
               {profile?.username && (
@@ -1309,11 +1436,12 @@ export const SettingsPage = () => {
                   {profile.email}
                 </p>
               )}
+
             </div>
           </div>
         </div>
 
-        {/* Profile Information */}
+        {/* PROFILE INFORMATION */}
 
         <div className="border-t border-slate-100 px-5 py-5 dark:border-slate-800 sm:px-7">
 
@@ -1329,11 +1457,13 @@ export const SettingsPage = () => {
                   key={label}
                   className="flex min-w-0 items-start gap-3"
                 >
+
                   <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                     <Icon size={17} />
                   </div>
 
                   <div className="min-w-0">
+
                     <p className="text-xs font-medium text-slate-400">
                       {label}
                     </p>
@@ -1341,6 +1471,7 @@ export const SettingsPage = () => {
                     <p className="mt-0.5 break-words text-sm font-semibold text-slate-700 dark:text-slate-200">
                       {value}
                     </p>
+
                   </div>
                 </div>
               )
@@ -1355,17 +1486,23 @@ export const SettingsPage = () => {
       ===================================================== */}
 
       <section>
+
         <div className="mb-4">
+
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Appearance
           </h2>
 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Choose the interface that feels most comfortable.
+            Choose the interface that feels most
+            comfortable.
           </p>
+
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
+
+          {/* LIGHT */}
 
           <button
             type="button"
@@ -1376,11 +1513,13 @@ export const SettingsPage = () => {
                 : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
             }`}
           >
+
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-950/30">
               <Sun size={21} />
             </div>
 
             <div>
+
               <p className="font-semibold text-slate-900 dark:text-white">
                 Light Mode
               </p>
@@ -1388,6 +1527,7 @@ export const SettingsPage = () => {
               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 Bright and clean interface
               </p>
+
             </div>
 
             <div
@@ -1397,7 +1537,10 @@ export const SettingsPage = () => {
                   : "border-slate-300 dark:border-slate-600"
               }`}
             />
+
           </button>
+
+          {/* DARK */}
 
           <button
             type="button"
@@ -1408,18 +1551,22 @@ export const SettingsPage = () => {
                 : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
             }`}
           >
+
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 dark:bg-indigo-950/30 dark:text-indigo-400">
               <Moon size={21} />
             </div>
 
             <div>
+
               <p className="font-semibold text-slate-900 dark:text-white">
                 Dark Mode
               </p>
 
               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Comfortable for low-light environments
+                Comfortable for low-light
+                environments
               </p>
+
             </div>
 
             <div
@@ -1429,7 +1576,99 @@ export const SettingsPage = () => {
                   : "border-slate-300 dark:border-slate-600"
               }`}
             />
+
           </button>
+
+        </div>
+      </section>
+
+      {/* =====================================================
+          VOICE & SPEECH
+      ===================================================== */}
+
+      <section>
+
+        <div className="mb-4">
+
+          <div className="flex items-center gap-2">
+
+            <Volume2
+              size={19}
+              className="text-sky-500"
+            />
+
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Voice & Speech
+            </h2>
+
+          </div>
+
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Choose the voice SpeakMate uses when
+            speaking questions and messages.
+          </p>
+
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5">
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+
+            {/* VOICE SELECT */}
+
+            <label className="min-w-0 flex-1">
+
+              <span className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                AI Speaking Voice
+              </span>
+
+              <select
+                value={selectedVoice}
+                onChange={handleVoiceChange}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              >
+
+                {availableVoices.length === 0 && (
+                  <option value="">
+                    No English voices available
+                  </option>
+                )}
+
+                {availableVoices.map((voice) => (
+                  <option
+                    key={`${voice.name}-${voice.lang}`}
+                    value={voice.name}
+                  >
+                    {voice.name} ({voice.lang})
+                  </option>
+                ))}
+
+              </select>
+
+            </label>
+
+            {/* PREVIEW */}
+
+            <button
+              type="button"
+              onClick={handlePreviewVoice}
+              disabled={
+                !selectedVoice ||
+                availableVoices.length === 0
+              }
+              className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Play size={16} />
+              Preview Voice
+            </button>
+
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            Available voices depend on your browser
+            and device. Preview a voice before
+            selecting the one you prefer.
+          </p>
 
         </div>
       </section>
@@ -1439,7 +1678,9 @@ export const SettingsPage = () => {
       ===================================================== */}
 
       <section>
+
         <div className="mb-4">
+
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Practice Overview
           </h2>
@@ -1447,11 +1688,13 @@ export const SettingsPage = () => {
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             A quick look at your SpeakMate journey.
           </p>
+
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 
           <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+
             <BarChart3
               size={18}
               className="mb-3 text-sky-500"
@@ -1464,9 +1707,11 @@ export const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-500">
               Sessions
             </p>
+
           </div>
 
           <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+
             <MessageSquare
               size={18}
               className="mb-3 text-sky-500"
@@ -1479,9 +1724,11 @@ export const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-500">
               Conversations
             </p>
+
           </div>
 
           <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+
             <Calendar
               size={18}
               className="mb-3 text-sky-500"
@@ -1494,9 +1741,11 @@ export const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-500">
               Practice Days
             </p>
+
           </div>
 
           <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+
             <Flame
               size={18}
               className="mb-3 text-orange-500"
@@ -1509,6 +1758,7 @@ export const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-500">
               Day Streak
             </p>
+
           </div>
 
         </div>
@@ -1516,30 +1766,42 @@ export const SettingsPage = () => {
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
 
           <span className="inline-flex items-center gap-1.5">
-            <Trophy size={15} className="text-amber-500" />
+
+            <Trophy
+              size={15}
+              className="text-amber-500"
+            />
 
             Longest streak:
+
             <strong className="text-slate-700 dark:text-slate-200">
               {analytics?.longestStreak ?? 0} days
             </strong>
+
           </span>
 
           <span className="inline-flex items-center gap-1.5">
-            <Target size={15} className="text-sky-500" />
+
+            <Target
+              size={15}
+              className="text-sky-500"
+            />
 
             Average score:
+
             <strong className="text-slate-700 dark:text-slate-200">
               {analytics?.averageScore != null
                 ? analytics.averageScore.toFixed(1)
                 : "0.0"}
             </strong>
+
           </span>
 
         </div>
       </section>
 
       {/* =====================================================
-          ACCOUNT ACTION
+          ACCOUNT
       ===================================================== */}
 
       <section className="border-t border-slate-200 pt-6 dark:border-slate-800">
@@ -1547,13 +1809,16 @@ export const SettingsPage = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
           <div>
+
             <h2 className="font-bold text-slate-900 dark:text-white">
               Account
             </h2>
 
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Sign out of your SpeakMate account on this device.
+              Sign out of your SpeakMate account on
+              this device.
             </p>
+
           </div>
 
           <button
