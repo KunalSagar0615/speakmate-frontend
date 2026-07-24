@@ -1,15 +1,21 @@
 import {
-  Award,
   BarChart3,
   Calendar,
   CheckCircle2,
   Flame,
-  MessageSquare,
+  LogOut,
+  Mail,
   Moon,
+  Phone,
+  ShieldCheck,
   Sun,
   Target,
-  TrendingUp,
   Trophy,
+  User,
+  BriefcaseBusiness,
+  GraduationCap,
+  Globe2,
+  MessageSquare,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { translateText, getTranslationLabel } from "../../utils/translation";
@@ -121,18 +127,11 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const ProfileField = ({ label, value }) => {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="flex flex-col gap-1 border-b border-slate-100 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="font-medium text-slate-800 dark:text-slate-100">{value}</span>
-    </div>
-  );
-};
 
 export const UserDashboardPage = () => {
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
+  const navigate = useNavigate();
+
   const [sessions, setSessions] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -143,14 +142,17 @@ export const UserDashboardPage = () => {
       setLoading(false);
       return;
     }
+
     (async () => {
       setLoading(true);
       setError("");
+
       try {
         const [userSessions, analyticsData] = await Promise.all([
           sessionService.getByUserId(userId),
           dashboardService.getAnalytics(),
         ]);
+
         setSessions(userSessions);
         setAnalytics(analyticsData);
       } catch {
@@ -164,7 +166,7 @@ export const UserDashboardPage = () => {
   }, [userId]);
 
   const completedSessions = useMemo(
-    () => sessions.filter((s) => s.status === "COMPLETED").length,
+    () => sessions.filter((session) => session.status === "COMPLETED").length,
     [sessions]
   );
 
@@ -177,24 +179,51 @@ export const UserDashboardPage = () => {
   }
 
   if (error) {
-    return <Card className="text-rose-500">{error}</Card>;
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+        {error}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <DashboardHero
         stats={{
           currentStreak: analytics?.currentStreak ?? 0,
-          totalSessions: analytics?.totalSessions ?? 0,
+          totalSessions:
+            completedSessions || analytics?.totalSessions || 0,
           practiceDays: analytics?.totalPracticeDays ?? 0,
           reportsGenerated: analytics?.reportsGenerated ?? 0,
         }}
-        userName="Kunal"
+        userName={user?.name || user?.username || "User"}
         onStartPractice={() => navigate("/practice")}
+        onCustomPractice={() => navigate("/custom-practice")}
+        onSessions={() => navigate("/sessions")}
+        onReports={() => navigate("/reports")}
       />
-      <Card className="w-full">
-        <ActivityHeatmap activityHeatmap={analytics?.activityHeatmap || {}} />
-      </Card>
+
+      <section>
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-sky-500">
+              Your Consistency
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+              Activity Heatmap
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Every practice day moves you one step forward.
+            </p>
+          </div>
+        </div>
+
+        <ActivityHeatmap
+          activityHeatmap={analytics?.activityHeatmap || {}}
+        />
+      </section>
     </div>
   );
 };
@@ -1087,60 +1116,82 @@ export const ReportsPage = () => {
   );
 };
 
-const AnalyticsStatCard = ({ title, value, icon: Icon }) => (
-  <Card className="flex items-center gap-4">
-    <div className="rounded-xl bg-sky-100 p-3 dark:bg-sky-900/40">
-      <Icon className="text-primary" size={22} />
-    </div>
-    <div>
-      <p className="text-xs text-slate-500">{title}</p>
-      <p className="text-2xl font-bold text-slate-800 dark:text-slate-50">{value}</p>
-    </div>
-  </Card>
-);
 
 export const ProfilePage = () => {
-  const { user: cachedUser, setUser } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    navigate("/settings", { replace: true });
+  }, [navigate]);
+
+  return null;
+};
+
+export const SettingsPage = () => {
+  const { theme, setTheme } = useTheme();
+  const {
+    user: cachedUser,
+    setUser,
+    logout,
+  } = useAuth();
+
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
-  const [analyticsError, setAnalyticsError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const loadSettings = async () => {
       setLoading(true);
       setProfileError("");
-      setAnalyticsError("");
 
       const profilePromise = userService
         .getProfile()
         .then((data) => {
-          if (!cancelled) {
-            setProfile(data);
-            setUser({ ...data, role: cachedUser?.role });
-          }
+          if (cancelled) return;
+
+          setProfile(data);
+
+          setUser({
+            ...data,
+            role: cachedUser?.role,
+          });
         })
         .catch(() => {
-          if (!cancelled) {
-            setProfileError("Unable to load profile. Please try again.");
-            setProfile(cachedUser);
-          }
+          if (cancelled) return;
+
+          setProfile(cachedUser || null);
+          setProfileError("Unable to refresh profile information.");
         });
 
       const analyticsPromise = dashboardService
         .getAnalytics()
         .then((data) => {
-          if (!cancelled) setAnalytics(data);
+          if (!cancelled) {
+            setAnalytics(data);
+          }
         })
         .catch(() => {
-          if (!cancelled) setAnalyticsError("Unable to load analytics.");
+          if (!cancelled) {
+            setAnalytics(null);
+          }
         });
 
-      await Promise.allSettled([profilePromise, analyticsPromise]);
-      if (!cancelled) setLoading(false);
-    })();
+      await Promise.allSettled([
+        profilePromise,
+        analyticsPromise,
+      ]);
+
+      if (!cancelled) {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
 
     return () => {
       cancelled = true;
@@ -1149,198 +1200,374 @@ export const ProfilePage = () => {
 
   const verified = isEmailVerified(profile?.emailVerified);
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   if (loading) {
     return (
-      <div className="flex min-h-[30vh] items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <Loader />
       </div>
     );
   }
 
-  if (profileError && !profile) {
-    return <Card className="text-rose-500">{profileError}</Card>;
-  }
-
-  const modeCards = [
-    { key: "FRIEND", label: "AI Friend", icon: MessageSquare },
-    { key: "ENGLISH_COACH", label: "AI Teacher", icon: Target },
-    { key: "INTERVIEW", label: "AI Interviewer", icon: Award },
-  ];
-
-  const difficultyCards = [
-    { key: "BEGINNER", label: "Beginner" },
-    { key: "INTERMEDIATE", label: "Intermediate" },
-    { key: "ADVANCED", label: "Advanced" },
-  ];
+  const profileFields = [
+    {
+      label: "Email",
+      value: profile?.email,
+      icon: Mail,
+    },
+    {
+      label: "Mobile Number",
+      value: profile?.mobileNumber,
+      icon: Phone,
+    },
+    {
+      label: "Country",
+      value: profile?.country,
+      icon: Globe2,
+    },
+    {
+      label: "Education",
+      value: profile?.highestEducation,
+      icon: GraduationCap,
+    },
+    {
+      label: "Occupation",
+      value: profile?.currentOccupation,
+      icon: BriefcaseBusiness,
+    },
+  ].filter((item) => item.value);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <h2 className="text-xl font-bold">Profile Information</h2>
-        <div className="mt-4">
-          <ProfileField label="Name" value={profile?.name} />
-          <ProfileField label="Username" value={profile?.username} />
-          <ProfileField label="Email" value={profile?.email} />
-          <ProfileField label="Mobile Number" value={profile?.mobileNumber} />
-          <ProfileField label="Country" value={profile?.country} />
-          <ProfileField label="Highest Education" value={profile?.highestEducation} />
-          <ProfileField label="Current Occupation" value={profile?.currentOccupation} />
-          <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-slate-500">Email Verified</span>
-            <span
-              className={`inline-flex items-center gap-1 font-medium ${verified ? "text-emerald-600" : "text-amber-600"
-                }`}
-            >
-              {verified ? (
-                <>
-                  <CheckCircle2 size={16} /> Verified ✅
-                </>
-              ) : (
-                <>Not Verified ❌</>
-              )}
-            </span>
-          </div>
-        </div>
-      </Card>
+    <div className="mx-auto max-w-5xl space-y-8">
 
-      {analyticsError && (
-        <Card className="text-sm text-amber-600">{analyticsError}</Card>
+      {/* =====================================================
+          PAGE HEADER
+      ===================================================== */}
+
+      <section>
+        <p className="text-sm font-semibold text-sky-500">
+          Your Account
+        </p>
+
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          Settings
+        </h1>
+
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          Manage your profile and personalize your SpeakMate experience.
+        </p>
+      </section>
+
+      {profileError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400">
+          {profileError}
+        </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AnalyticsStatCard
-          title="Total Sessions"
-          value={analytics?.totalSessions ?? 0}
-          icon={BarChart3}
-        />
-        <AnalyticsStatCard
-          title="Total Conversations"
-          value={analytics?.totalConversations ?? 0}
-          icon={MessageSquare}
-        />
-        <AnalyticsStatCard
-          title="Practice Days"
-          value={analytics?.totalPracticeDays ?? 0}
-          icon={Calendar}
-        />
-        <AnalyticsStatCard
-          title="Reports Generated"
-          value={analytics?.reportsGenerated ?? 0}
-          icon={TrendingUp}
-        />
-      </div>
+      {/* =====================================================
+          PROFILE HEADER
+      ===================================================== */}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <AnalyticsStatCard
-          title="Current Streak"
-          value={`${analytics?.currentStreak ?? 0} days`}
-          icon={Flame}
-        />
-        <AnalyticsStatCard
-          title="Longest Streak"
-          value={`${analytics?.longestStreak ?? 0} days`}
-          icon={Trophy}
-        />
-        <AnalyticsStatCard
-          title="Average Score"
-          value={analytics?.averageScore != null ? analytics.averageScore.toFixed(1) : "0.0"}
-          icon={Target}
-        />
-      </div>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
 
-      <Card>
-        <h3 className="mb-4 text-lg font-semibold">Mode Usage</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {modeCards.map(({ key, label, icon: Icon }) => (
-            <div
-              key={key}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
-            >
-              <Icon className="text-primary" size={24} />
-              <div>
-                <p className="text-sm text-slate-500">{label}</p>
-                <p className="text-2xl font-bold">{analytics?.modeUsage?.[key] ?? 0}</p>
+        <div className="relative overflow-hidden px-5 py-6 sm:px-7">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-sky-100 blur-3xl dark:bg-sky-950/40" />
+
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/20">
+              <User size={30} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-xl font-bold text-slate-900 dark:text-white">
+                  {profile?.name || profile?.username || "SpeakMate User"}
+                </h2>
+
+                {verified && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <ShieldCheck size={13} />
+                    Verified
+                  </span>
+                )}
               </div>
+
+              {profile?.username && (
+                <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                  @{profile.username}
+                </p>
+              )}
+
+              {profile?.email && (
+                <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
+                  {profile.email}
+                </p>
+              )}
             </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="mb-4 text-lg font-semibold">Difficulty Usage</h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {difficultyCards.map(({ key, label }) => (
-            <div
-              key={key}
-              className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"
-            >
-              <p className="text-sm text-slate-500">{label}</p>
-              <p className="text-2xl font-bold">{analytics?.difficultyUsage?.[key] ?? 0}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-    </div>
-  );
-};
-
-export const SettingsPage = () => {
-  const { theme, setTheme } = useTheme();
-  const [saved, setSaved] = useState(false);
-
-  const savePreference = () => {
-    setSaved(true);
-    toast.success("Theme preference saved");
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <div className="space-y-4">
-      <Card className="space-y-5">
-        <div>
-          <h2 className="text-xl font-bold">Settings</h2>
-          <p className="mt-1 text-sm text-slate-500">Manage your appearance and preferences.</p>
-        </div>
-
-        <section>
-          <h3 className="font-semibold">Theme Preferences</h3>
-          <p className="mt-1 text-sm text-slate-500">Choose how SpeakMate looks on your device.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setTheme("light")}
-              className={`flex items-center gap-3 rounded-xl border p-4 transition ${theme === "light"
-                  ? "border-primary bg-sky-50 ring-2 ring-primary/30 dark:bg-sky-950/30"
-                  : "border-slate-200 dark:border-slate-700"
-                }`}
-            >
-              <Sun size={20} className="text-amber-500" />
-              <span>
-                <span className="block font-medium">Light Mode</span>
-                <span className="text-xs text-slate-500">Bright and clean interface</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("dark")}
-              className={`flex items-center gap-3 rounded-xl border p-4 transition ${theme === "dark"
-                  ? "border-primary bg-sky-50 ring-2 ring-primary/30 dark:bg-sky-950/30"
-                  : "border-slate-200 dark:border-slate-700"
-                }`}
-            >
-              <Moon size={20} className="text-indigo-400" />
-              <span>
-                <span className="block font-medium">Dark Mode</span>
-                <span className="text-xs text-slate-500">Easy on the eyes at night</span>
-              </span>
-            </button>
           </div>
-          <Button className="mt-4" onClick={savePreference}>
-            {saved ? "Saved!" : "Save Preference"}
-          </Button>
-        </section>
-      </Card>
+        </div>
+
+        {/* Profile Information */}
+
+        <div className="border-t border-slate-100 px-5 py-5 dark:border-slate-800 sm:px-7">
+
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Profile Information
+          </h3>
+
+          <div className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+
+            {profileFields.map(
+              ({ label, value, icon: Icon }) => (
+                <div
+                  key={label}
+                  className="flex min-w-0 items-start gap-3"
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <Icon size={17} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-400">
+                      {label}
+                    </p>
+
+                    <p className="mt-0.5 break-words text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      {value}
+                    </p>
+                  </div>
+                </div>
+              )
+            )}
+
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          APPEARANCE
+      ===================================================== */}
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            Appearance
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Choose the interface that feels most comfortable.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+
+          <button
+            type="button"
+            onClick={() => setTheme("light")}
+            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
+              theme === "light"
+                ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
+                : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+            }`}
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-950/30">
+              <Sun size={21} />
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Light Mode
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Bright and clean interface
+              </p>
+            </div>
+
+            <div
+              className={`ml-auto h-4 w-4 rounded-full border-2 ${
+                theme === "light"
+                  ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
+                  : "border-slate-300 dark:border-slate-600"
+              }`}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTheme("dark")}
+            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
+              theme === "dark"
+                ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
+                : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+            }`}
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 dark:bg-indigo-950/30 dark:text-indigo-400">
+              <Moon size={21} />
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Dark Mode
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Comfortable for low-light environments
+              </p>
+            </div>
+
+            <div
+              className={`ml-auto h-4 w-4 rounded-full border-2 ${
+                theme === "dark"
+                  ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
+                  : "border-slate-300 dark:border-slate-600"
+              }`}
+            />
+          </button>
+
+        </div>
+      </section>
+
+      {/* =====================================================
+          PRACTICE OVERVIEW
+      ===================================================== */}
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            Practice Overview
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            A quick look at your SpeakMate journey.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+
+          <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+            <BarChart3
+              size={18}
+              className="mb-3 text-sky-500"
+            />
+
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {analytics?.totalSessions ?? 0}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Sessions
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+            <MessageSquare
+              size={18}
+              className="mb-3 text-sky-500"
+            />
+
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {analytics?.totalConversations ?? 0}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Conversations
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+            <Calendar
+              size={18}
+              className="mb-3 text-sky-500"
+            />
+
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {analytics?.totalPracticeDays ?? 0}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Practice Days
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-900">
+            <Flame
+              size={18}
+              className="mb-3 text-orange-500"
+            />
+
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {analytics?.currentStreak ?? 0}
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Day Streak
+            </p>
+          </div>
+
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+
+          <span className="inline-flex items-center gap-1.5">
+            <Trophy size={15} className="text-amber-500" />
+
+            Longest streak:
+            <strong className="text-slate-700 dark:text-slate-200">
+              {analytics?.longestStreak ?? 0} days
+            </strong>
+          </span>
+
+          <span className="inline-flex items-center gap-1.5">
+            <Target size={15} className="text-sky-500" />
+
+            Average score:
+            <strong className="text-slate-700 dark:text-slate-200">
+              {analytics?.averageScore != null
+                ? analytics.averageScore.toFixed(1)
+                : "0.0"}
+            </strong>
+          </span>
+
+        </div>
+      </section>
+
+      {/* =====================================================
+          ACCOUNT ACTION
+      ===================================================== */}
+
+      <section className="border-t border-slate-200 pt-6 dark:border-slate-800">
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+            <h2 className="font-bold text-slate-900 dark:text-white">
+              Account
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Sign out of your SpeakMate account on this device.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950/30 sm:self-auto"
+          >
+            <LogOut size={17} />
+            Logout
+          </button>
+
+        </div>
+      </section>
+
     </div>
   );
 };

@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Button, Card, Loader } from "../../components/common/UI";
+import { MessageCircle, Mic } from "lucide-react";
+
+import {
+  Button,
+  Card,
+  Loader,
+} from "../../components/common/UI";
 import { QuestionEditor } from "../../components/custom-practice/QuestionEditor";
 import { customPracticeService } from "../../services/customPracticeService";
 import { getErrorMessage } from "../../utils/errorMessages";
@@ -17,6 +23,11 @@ export const CustomPracticeSetup = () => {
   const [creating, setCreating] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
+  // Chat is default.
+  // We are NOT sending this to backend yet.
+  const [communicationType, setCommunicationType] =
+    useState("CHAT");
+
   const isValid = useMemo(() => {
     const cleaned = questions
       .map((question) => question.trim())
@@ -26,13 +37,17 @@ export const CustomPracticeSetup = () => {
       sessionName.trim().length > 0 &&
       cleaned.length > 0 &&
       cleaned.length === questions.length &&
-      questions.every((question) => question.trim().length > 0)
+      questions.every(
+        (question) => question.trim().length > 0
+      )
     );
   }, [questions, sessionName]);
 
   const handleExtract = async () => {
     if (!content.trim()) {
-      setExtractError("Paste some content to extract questions.");
+      setExtractError(
+        "Paste some content to extract questions."
+      );
       return;
     }
 
@@ -40,11 +55,14 @@ export const CustomPracticeSetup = () => {
     setExtracting(true);
 
     try {
-      const result = await customPracticeService.extractQuestions(
-        content.trim()
-      );
+      const result =
+        await customPracticeService.extractQuestions(
+          content.trim()
+        );
 
-      const nextQuestions = (result?.questions || [])
+      const nextQuestions = (
+        result?.questions || []
+      )
         .map((item) => item.trim())
         .filter(Boolean);
 
@@ -52,7 +70,9 @@ export const CustomPracticeSetup = () => {
       setShowReview(true);
 
       if (nextQuestions.length === 0) {
-        toast.error("No questions were extracted.");
+        toast.error(
+          "No questions were extracted."
+        );
       }
     } catch (error) {
       setExtractError(getErrorMessage(error));
@@ -72,13 +92,17 @@ export const CustomPracticeSetup = () => {
     setCreating(true);
 
     try {
-      const session = await customPracticeService.createSession({
-        sessionName: sessionName.trim(),
-        questions: questions.map((question) => question.trim()),
-      });
+      // Keep existing backend request unchanged.
+      const session =
+        await customPracticeService.createSession({
+          sessionName: sessionName.trim(),
+          questions: questions.map((question) =>
+            question.trim()
+          ),
+        });
 
-      // Backend CustomPracticeSessionDto returns sessionId
-      const sessionId = session?.sessionId ?? null;
+      const sessionId =
+        session?.sessionId ?? null;
 
       if (
         !sessionId ||
@@ -89,16 +113,29 @@ export const CustomPracticeSetup = () => {
           session
         );
 
-        toast.error("Invalid practice session ID.");
+        toast.error(
+          "Invalid practice session ID."
+        );
         return;
       }
 
-      toast.success("Practice session created.");
+      toast.success(
+        `${
+          communicationType === "VOICE"
+            ? "Voice"
+            : "Chat"
+        } practice session created.`
+      );
 
       navigate(
-        `/custom-practice/session/${String(sessionId)}`,
+        `/custom-practice/session/${String(
+          sessionId
+        )}`,
         {
-          state: { session },
+          state: {
+            session,
+            communicationType,
+          },
         }
       );
     } catch (error) {
@@ -114,10 +151,12 @@ export const CustomPracticeSetup = () => {
     setShowReview(false);
     setExtractError("");
     setSessionName("");
+    setCommunicationType("CHAT");
   };
 
   return (
     <div className="space-y-4">
+      {/* QUESTION EXTRACTION */}
       <Card className="space-y-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">
@@ -129,8 +168,9 @@ export const CustomPracticeSetup = () => {
           </h2>
 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Paste your interview or study questions and let the AI
-            extract a clean list for practice.
+            Paste your interview or study
+            questions and let the AI extract a
+            clean list for practice.
           </p>
         </div>
 
@@ -180,6 +220,7 @@ export const CustomPracticeSetup = () => {
         </div>
       </Card>
 
+      {/* REVIEW */}
       {showReview && (
         <Card className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -189,7 +230,8 @@ export const CustomPracticeSetup = () => {
               </h3>
 
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Edit, remove, or add questions before you start.
+                Edit, remove, or add questions
+                before you start.
               </p>
             </div>
 
@@ -206,6 +248,92 @@ export const CustomPracticeSetup = () => {
             disabled={creating}
           />
 
+          {/* PRACTICE MODE */}
+          <div>
+            <div className="mb-2">
+              <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Practice Mode
+              </h4>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Choose how you want to answer
+                your questions.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {/* CHAT */}
+              <button
+                type="button"
+                disabled={creating}
+                onClick={() =>
+                  setCommunicationType("CHAT")
+                }
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+                  communicationType === "CHAT"
+                    ? "border-sky-500 bg-sky-50 ring-1 ring-sky-500/30 dark:bg-sky-950/30"
+                    : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-600"
+                }`}
+              >
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    communicationType === "CHAT"
+                      ? "bg-sky-500 text-white"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  <MessageCircle size={19} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    Chat Mode
+                  </p>
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Type and edit your answers
+                  </p>
+                </div>
+              </button>
+
+              {/* VOICE */}
+              <button
+                type="button"
+                disabled={creating}
+                onClick={() =>
+                  setCommunicationType("VOICE")
+                }
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+                  communicationType === "VOICE"
+                    ? "border-sky-500 bg-sky-50 ring-1 ring-sky-500/30 dark:bg-sky-950/30"
+                    : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-600"
+                }`}
+              >
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    communicationType === "VOICE"
+                      ? "bg-sky-500 text-white"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  <Mic size={19} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    Voice Mode
+                  </p>
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Speak, review and edit your
+                    answer
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* ACTIONS */}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"
@@ -225,16 +353,26 @@ export const CustomPracticeSetup = () => {
                   <Loader />
                   Starting...
                 </span>
+              ) : communicationType ===
+                "VOICE" ? (
+                <span className="flex items-center gap-2">
+                  <Mic size={16} />
+                  Start Voice Practice
+                </span>
               ) : (
-                "Start Practice"
+                <span className="flex items-center gap-2">
+                  <MessageCircle size={16} />
+                  Start Chat Practice
+                </span>
               )}
             </Button>
           </div>
 
           {!isValid && (
             <p className="text-sm text-amber-600">
-              Session name is required, there must be at least
-              one question, and every question must have content.
+              Session name is required, there
+              must be at least one question, and
+              every question must have content.
             </p>
           )}
         </Card>

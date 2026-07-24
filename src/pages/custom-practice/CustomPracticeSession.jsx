@@ -1,22 +1,27 @@
 import {
   CheckCircle2,
+  Mic,
   PauseCircle,
   PlayCircle,
   RotateCcw,
   Sparkles,
   StopCircle,
+  Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import { Button, Card, Loader } from "../../components/common/UI";
 import { EndPracticeModal } from "../../components/custom-practice/EndPracticeModal";
 import { PausePracticeModal } from "../../components/custom-practice/PausePracticeModal";
 import { customPracticeService } from "../../services/customPracticeService";
 import { getErrorMessage } from "../../utils/errorMessages";
+import { useVoicePractice } from "../../hooks/useVoicePractice";
 
 const statusStyles = {
-  ACTIVE: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  ACTIVE:
+    "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
   PAUSED:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   COMPLETED:
@@ -41,9 +46,57 @@ export const CustomPracticeSession = () => {
   const location = useLocation();
   const { sessionId } = useParams();
 
-  const [session, setSession] = useState(location.state?.session || null);
-  const [loading, setLoading] = useState(!location.state?.session);
+  /*
+   * CHAT / VOICE remains frontend-only.
+   *
+   * Setup currently passes:
+   * state: {
+   *   session,
+   *   communicationType
+   * }
+   */
+  const initialCommunicationType =
+    location.state?.communicationType === "VOICE"
+      ? "VOICE"
+      : "CHAT";
+
+  const [communicationType] = useState(() => {
+    const storedMode = sessionStorage.getItem(
+      `custom-practice-mode-${sessionId}`
+    );
+
+    if (storedMode === "VOICE" || storedMode === "CHAT") {
+      return storedMode;
+    }
+
+    return initialCommunicationType;
+  });
+
+  const isVoiceMode = communicationType === "VOICE";
+
+  const {
+    transcript,
+    displayTranscript,
+    listening,
+    error: voiceError,
+    setTranscript,
+    clearTranscript,
+    startListening,
+    stopListening,
+    speakText,
+    stopSpeaking,
+  } = useVoicePractice();
+
+  const [session, setSession] = useState(
+    location.state?.session || null
+  );
+
+  const [loading, setLoading] = useState(
+    !location.state?.session
+  );
+
   const [answer, setAnswer] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [skipping, setSkipping] = useState(false);
   const [movingNext, setMovingNext] = useState(false);
@@ -64,9 +117,10 @@ export const CustomPracticeSession = () => {
   const [roundBanner, setRoundBanner] = useState("");
 
   const debounceRef = useRef(null);
+  const spokenQuestionRef = useRef(null);
 
   // =========================================================
-  // NORMALIZE SESSION ID FROM URL
+  // NORMALIZE SESSION ID
   // =========================================================
 
   const normalizedRouteSessionId = useMemo(() => {
@@ -96,6 +150,19 @@ export const CustomPracticeSession = () => {
   }, [sessionId]);
 
   // =========================================================
+  // KEEP FRONTEND MODE AFTER REFRESH
+  // =========================================================
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    sessionStorage.setItem(
+      `custom-practice-mode-${sessionId}`,
+      communicationType
+    );
+  }, [sessionId, communicationType]);
+
+  // =========================================================
   // LOAD SESSION
   // =========================================================
 
@@ -116,7 +183,9 @@ export const CustomPracticeSession = () => {
 
     try {
       const currentSession =
-        await customPracticeService.getSession(requestedSessionId);
+        await customPracticeService.getSession(
+          requestedSessionId
+        );
 
       setSession(currentSession);
 
@@ -142,7 +211,7 @@ export const CustomPracticeSession = () => {
   };
 
   // =========================================================
-  // INITIAL SESSION LOAD
+  // INITIAL LOAD
   // =========================================================
 
   useEffect(() => {
@@ -157,24 +226,103 @@ export const CustomPracticeSession = () => {
       return;
     }
 
-    setAnswer(session?.currentQuestion?.draftAnswer || "");
-  }, [normalizedRouteSessionId, navigate, session]);
+    setAnswer(
+      session?.currentQuestion?.draftAnswer || ""
+    );
+  }, [
+    normalizedRouteSessionId,
+    navigate,
+    session,
+  ]);
 
   // =========================================================
   // CURRENT QUESTION
   // =========================================================
 
   const currentQuestion = session?.currentQuestion;
+  const currentQuestionId = currentQuestion?.questionId;
+
+  const currentQuestionText =
+    currentQuestion?.question ||
+    currentQuestion?.content ||
+    currentQuestion?.questionText ||
+    "";
 
   // =========================================================
-  // AUTO SAVE DRAFT
+  // VOICE TRANSCRIPT -> EDITABLE ANSWER
+  // =========================================================
+
+  useEffect(() => {
+    if (!isVoiceMode || !displayTranscript || evaluation) {
+      return;
+    }
+
+    setAnswer(displayTranscript);
+    setDraftStatus("idle");
+  }, [
+    displayTranscript,
+    isVoiceMode,
+    evaluation,
+  ]);
+
+// =========================================================
+// AUTO-SPEAK EVERY NEW QUESTION IN VOICE MODE
+// =========================================================
+
+useEffect(() => {
+  if (!isVoiceMode) return;
+
+  if (!currentQuestionId || !currentQuestionText) {
+    return;
+  }
+
+  // Do not speak the same question again because of a re-render.
+  if (spokenQuestionRef.current === currentQuestionId) {
+    return;
+  }
+
+  // Stop anything left from the previous question.
+  stopListening();
+  stopSpeaking();
+
+  const timer = setTimeout(() => {
+    spokenQuestionRef.current = currentQuestionId;
+
+    speakText(currentQuestionText);
+  }, 600);
+
+  return () => {
+    clearTimeout(timer);
+  };
+}, [
+  isVoiceMode,
+  currentQuestionId,
+  currentQuestionText,
+  speakText,
+  stopListening,
+  stopSpeaking,
+]);
+
+  // =========================================================
+  // CLEAN UP VOICE WHEN LEAVING
+  // =========================================================
+
+  useEffect(() => {
+    return () => {
+      stopListening();
+      stopSpeaking();
+    };
+  }, [stopListening, stopSpeaking]);
+
+  // =========================================================
+  // DRAFT SAVE
   // =========================================================
 
   useEffect(() => {
     const activeSessionId = normalizedRouteSessionId;
     const questionId = session?.currentQuestion?.questionId;
 
-    if (!questionId || !activeSessionId) {
+    if (!questionId || !activeSessionId || evaluation) {
       return;
     }
 
@@ -185,10 +333,13 @@ export const CustomPracticeSession = () => {
       setDraftStatus("saving");
 
       try {
-        await customPracticeService.saveDraft(activeSessionId, {
-          questionId,
-          draftAnswer: answer.trim() ? answer : null,
-        });
+        await customPracticeService.saveDraft(
+          activeSessionId,
+          {
+            questionId,
+            draftAnswer: answer.trim() ? answer : null,
+          }
+        );
 
         setDraftStatus("saved");
       } catch (error) {
@@ -206,23 +357,62 @@ export const CustomPracticeSession = () => {
     answer,
     session?.currentQuestion?.questionId,
     normalizedRouteSessionId,
+    evaluation,
   ]);
 
   // =========================================================
-  // PROGRESS
+  // MANUAL ANSWER EDIT
   // =========================================================
 
-  const progressValue = useMemo(() => {
-    if (!session?.totalQuestions) {
-      return 0;
+  const handleAnswerChange = (event) => {
+    const value = event.target.value;
+
+    setAnswer(value);
+    setDraftStatus("idle");
+
+    /*
+     * Keep voice transcript synchronized with manual edits.
+     * This prevents the next recognition result from restoring
+     * the old, unedited transcript.
+     */
+    if (isVoiceMode) {
+      setTranscript(value);
+    }
+  };
+
+  // =========================================================
+  // START / STOP SPEAKING
+  // =========================================================
+
+  const handleVoiceToggle = () => {
+    if (!isVoiceMode || evaluation) return;
+
+    if (listening) {
+      stopListening();
+      return;
     }
 
-    const answered = session?.answeredQuestions ?? 0;
+    stopSpeaking();
 
-    return Math.round(
-      (answered / session.totalQuestions) * 100
-    );
-  }, [session]);
+    /*
+     * Start recognition from the current editable answer.
+     * New speech will append to what the user already has.
+     */
+    setTranscript(answer.trim());
+    startListening();
+  };
+
+  // =========================================================
+  // REPLAY QUESTION
+  // =========================================================
+
+  const handleReplayQuestion = () => {
+    if (!currentQuestionText) return;
+
+    stopListening();
+    stopSpeaking();
+    speakText(currentQuestionText);
+  };
 
   // =========================================================
   // SUBMIT ANSWER
@@ -245,6 +435,11 @@ export const CustomPracticeSession = () => {
     if (!answer.trim()) {
       toast.error("Write an answer before submitting.");
       return;
+    }
+
+    if (isVoiceMode) {
+      stopListening();
+      stopSpeaking();
     }
 
     setSubmitting(true);
@@ -271,8 +466,6 @@ export const CustomPracticeSession = () => {
       }
 
       setRoundBanner("");
-
-      await loadSession(activeSessionId, true);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -281,7 +474,7 @@ export const CustomPracticeSession = () => {
   };
 
   // =========================================================
-  // SKIP QUESTION
+  // SKIP
   // =========================================================
 
   const handleSkip = async () => {
@@ -306,6 +499,11 @@ export const CustomPracticeSession = () => {
 
     if (!confirmed) return;
 
+    if (isVoiceMode) {
+      stopListening();
+      stopSpeaking();
+    }
+
     setSkipping(true);
 
     try {
@@ -322,6 +520,9 @@ export const CustomPracticeSession = () => {
       }
 
       setRoundBanner("");
+
+      clearTranscript();
+      spokenQuestionRef.current = null;
 
       await loadSession(activeSessionId, false);
     } catch (error) {
@@ -341,6 +542,11 @@ export const CustomPracticeSession = () => {
     if (!activeSessionId) {
       toast.error("Invalid practice session ID.");
       return;
+    }
+
+    if (isVoiceMode) {
+      stopListening();
+      stopSpeaking();
     }
 
     setMovingNext(true);
@@ -367,6 +573,8 @@ export const CustomPracticeSession = () => {
         setEvaluation(null);
         setAnswer("");
 
+        clearTranscript();
+
         const refreshed =
           await customPracticeService.getSession(
             activeSessionId
@@ -385,9 +593,21 @@ export const CustomPracticeSession = () => {
 
       setSession(refreshed);
 
-      setAnswer(
-        refreshed?.currentQuestion?.draftAnswer || ""
-      );
+      const nextDraft =
+        refreshed?.currentQuestion?.draftAnswer || "";
+
+      setAnswer(nextDraft);
+
+      clearTranscript();
+
+      if (isVoiceMode && nextDraft) {
+        setTranscript(nextDraft);
+      }
+
+      /*
+       * Allow the next question to auto-speak.
+       */
+      spokenQuestionRef.current = null;
 
       setEvaluation(null);
       setShowNextButton(false);
@@ -399,7 +619,7 @@ export const CustomPracticeSession = () => {
   };
 
   // =========================================================
-  // PAUSE SESSION
+  // PAUSE
   // =========================================================
 
   const handlePause = async (pauseDays) => {
@@ -409,6 +629,9 @@ export const CustomPracticeSession = () => {
       toast.error("Invalid practice session ID.");
       return;
     }
+
+    stopListening();
+    stopSpeaking();
 
     setPauseLoading(true);
 
@@ -431,7 +654,7 @@ export const CustomPracticeSession = () => {
   };
 
   // =========================================================
-  // END SESSION
+  // END
   // =========================================================
 
   const handleEnd = async () => {
@@ -441,6 +664,9 @@ export const CustomPracticeSession = () => {
       toast.error("Invalid practice session ID.");
       return;
     }
+
+    stopListening();
+    stopSpeaking();
 
     setEndLoading(true);
 
@@ -466,6 +692,10 @@ export const CustomPracticeSession = () => {
 
       setSessionMessage(
         result?.message || "Practice ended."
+      );
+
+      sessionStorage.removeItem(
+        `custom-practice-mode-${sessionId}`
       );
 
       toast.success("Practice ended.");
@@ -508,58 +738,75 @@ export const CustomPracticeSession = () => {
 
   const showCompletionState = isTerminal;
 
+  const totalQuestions = session?.totalQuestions || 0;
+  const completedQuestions =
+    session?.completedQuestions || 0;
+
+  const progress =
+    totalQuestions > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (completedQuestions / totalQuestions) * 100
+          )
+        )
+      : 0;
+
+  const questionNumber =
+    currentQuestion?.questionNumber ||
+    completedQuestions + 1;
+
   // =========================================================
   // UI
   // =========================================================
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* SESSION HEADER */}
-
-      <Card className="space-y-4">
+      <Card className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-primary">
               Custom Practice
             </p>
 
-            <h2 className="text-2xl font-bold">
-              {session.sessionName}
+            <h2 className="mt-1 text-2xl font-bold">
+              {session.sessionName || "Practice Session"}
             </h2>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <span
-                className={`rounded-full px-2.5 py-1 font-medium ${
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   statusStyles[session.status] ||
-                  statusStyles.ACTIVE
+                  "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 }`}
               >
                 {session.status}
               </span>
 
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 Round {session.currentRound || 1}
               </span>
 
-              {session.currentQuestion && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  Question{" "}
-                  {session.currentQuestion.questionNumber ||
-                    1}{" "}
-                  of{" "}
-                  {session.currentQuestion.totalQuestions ||
-                    session.totalQuestions ||
-                    0}
+              {currentQuestion && (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {questionNumber} / {totalQuestions}
                 </span>
               )}
+
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {isVoiceMode ? "Voice Mode" : "Chat Mode"}
+              </span>
             </div>
           </div>
 
           <Button
             variant="secondary"
-            onClick={() =>
-              navigate("/custom-practice")
-            }
+            onClick={() => {
+              stopListening();
+              stopSpeaking();
+              navigate("/custom-practice");
+            }}
           >
             <span className="flex items-center gap-2">
               <PlayCircle size={16} />
@@ -568,113 +815,156 @@ export const CustomPracticeSession = () => {
           </Button>
         </div>
 
-        {/* PROGRESS */}
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-            <span>Progress</span>
-
-            <span>
-              {session.answeredQuestions || 0}/
-              {session.totalQuestions || 0}
-            </span>
-          </div>
-
-          <div className="h-2.5 rounded-full bg-slate-200 dark:bg-slate-800">
-            <div
-              className="h-2.5 rounded-full bg-primary"
-              style={{
-                width: `${progressValue}%`,
-              }}
+        {roundBanner && (
+          <div className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+            <RotateCcw
+              size={16}
+              className="mt-0.5 shrink-0"
             />
+            <span>{roundBanner}</span>
           </div>
-        </div>
-      </Card>
+        )}
 
-      {/* ROUND 2 BANNER */}
-
-      {roundBanner && (
-        <Card className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-            <RotateCcw size={18} />
-
-            <p className="font-medium">
-              {roundBanner}
-            </p>
-          </div>
-        </Card>
-      )}
-
-      {/* ACTIVE QUESTION */}
-
-      {!showCompletionState && currentQuestion ? (
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Question{" "}
-                {currentQuestion.questionNumber || 1}
-              </p>
-
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-                {currentQuestion.questionText}
-              </h3>
+        {!showCompletionState && (
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>Progress</span>
+              <span>
+                {completedQuestions}/{totalQuestions}
+              </span>
             </div>
 
-            {(session.currentRound === 2 ||
-              currentQuestion.retryQuestion) && (
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                Retry Round
-              </span>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-sky-500 transition-all"
+                style={{
+                  width: `${progress}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* ACTIVE PRACTICE */}
+      {!showCompletionState && currentQuestion ? (
+        <Card className="space-y-3">
+          {/* QUESTION */}
+          <div className="flex items-start gap-2">
+            <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug text-slate-900 dark:text-slate-100 sm:text-xl">
+              <span className="text-primary">
+                Q {questionNumber})
+              </span>{" "}
+              {currentQuestionText}
+            </h3>
+
+            {/* REPLAY QUESTION - VOICE ONLY */}
+            {isVoiceMode && (
+              <button
+                type="button"
+                onClick={handleReplayQuestion}
+                disabled={submitting || skipping}
+                title="Replay question"
+                aria-label="Replay question"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-400 dark:hover:bg-sky-950/30"
+              >
+                <Volume2 size={18} />
+              </button>
             )}
           </div>
 
-          {/* ANSWER */}
-
-          <div className="space-y-3">
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          {/* ONE SMALL GAP */}
+          <div className="pt-1">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200">
               Your answer
-
-              <textarea
-                rows={8}
-                value={answer}
-                onChange={(event) =>
-                  setAnswer(event.target.value)
-                }
-                placeholder="Type your answer here..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-primary/50 focus:ring dark:border-slate-700 dark:bg-slate-950"
-              />
             </label>
 
-            {draftStatus === "saving" ||
-            draftSaving ? (
-              <p className="text-sm text-slate-500">
-                Saving draft...
+            <textarea
+              rows={3}
+              value={answer}
+              onChange={handleAnswerChange}
+              disabled={
+                submitting ||
+                skipping ||
+                Boolean(evaluation)
+              }
+              placeholder={
+                isVoiceMode
+                  ? "Speak your answer or type here..."
+                  : "Type your answer here..."
+              }
+              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none ring-primary/50 transition focus:ring dark:border-slate-700 dark:bg-slate-950"
+            />
+
+            {/* VOICE ERROR */}
+            {isVoiceMode && voiceError && (
+              <p className="mt-1 text-xs text-rose-500">
+                {voiceError}
               </p>
-            ) : draftStatus === "error" ? (
-              <p className="text-sm text-amber-600">
-                Could not save draft.
-              </p>
-            ) : draftStatus === "saved" ? (
-              <p className="text-sm text-emerald-600">
-                Draft saved
-              </p>
-            ) : null}
+            )}
+
+            {/* DRAFT STATUS */}
+            {!evaluation && (
+              <div className="mt-1 min-h-[18px] text-xs">
+                {draftSaving || draftStatus === "saving" ? (
+                  <span className="text-slate-400">
+                    Saving draft...
+                  </span>
+                ) : draftStatus === "saved" ? (
+                  <span className="text-emerald-500">
+                    Draft saved
+                  </span>
+                ) : draftStatus === "error" ? (
+                  <span className="text-amber-500">
+                    Could not save draft.
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
 
-          {/* ACTION BUTTONS */}
+          {/* ALL ACTION BUTTONS IN SAME ROW */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* START / STOP SPEAKING - VOICE ONLY */}
+            {isVoiceMode && (
+              <Button
+                variant="secondary"
+                onClick={handleVoiceToggle}
+                disabled={
+                  submitting ||
+                  skipping ||
+                  Boolean(evaluation)
+                }
+              >
+                <span className="flex items-center gap-2">
+                  {listening ? (
+                    <>
+                      <StopCircle size={16} />
+                      Stop Speaking
+                    </>
+                  ) : (
+                    <>
+                      <Mic size={16} />
+                      Start Speaking
+                    </>
+                  )}
+                </span>
+              </Button>
+            )}
 
-          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleSubmit}
               disabled={
-                submitting || !answer.trim()
+                submitting ||
+                skipping ||
+                Boolean(evaluation) ||
+                !answer.trim()
               }
             >
               {submitting ? (
                 <span className="flex items-center gap-2">
                   <Loader />
-                  Evaluating...
+                  Checking...
                 </span>
               ) : (
                 "Submit Answer"
@@ -684,7 +974,11 @@ export const CustomPracticeSession = () => {
             <Button
               variant="secondary"
               onClick={handleSkip}
-              disabled={skipping}
+              disabled={
+                skipping ||
+                submitting ||
+                Boolean(evaluation)
+              }
             >
               {skipping ? (
                 <span className="flex items-center gap-2">
@@ -698,9 +992,12 @@ export const CustomPracticeSession = () => {
 
             <Button
               variant="secondary"
-              onClick={() =>
-                setPauseModalOpen(true)
-              }
+              onClick={() => {
+                stopListening();
+                stopSpeaking();
+                setPauseModalOpen(true);
+              }}
+              disabled={submitting || skipping}
             >
               <span className="flex items-center gap-2">
                 <PauseCircle size={16} />
@@ -710,9 +1007,12 @@ export const CustomPracticeSession = () => {
 
             <Button
               variant="danger"
-              onClick={() =>
-                setEndModalOpen(true)
-              }
+              onClick={() => {
+                stopListening();
+                stopSpeaking();
+                setEndModalOpen(true);
+              }}
+              disabled={submitting || skipping}
             >
               <span className="flex items-center gap-2">
                 <StopCircle size={16} />
@@ -721,7 +1021,64 @@ export const CustomPracticeSession = () => {
             </Button>
           </div>
 
-          {sessionMessage && (
+          {/* COMPACT EVALUATION */}
+          {evaluation && (
+            <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <Sparkles
+                      size={16}
+                      className="text-primary"
+                    />
+
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        evaluationStyles[
+                          evaluation.status
+                        ] ||
+                        "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      }`}
+                    >
+                      {evaluation.status
+                        ?.replaceAll("_", " ") ||
+                        "Reviewed"}
+                    </span>
+                  </div>
+
+                  <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    {evaluation.feedback ||
+                      "No feedback was returned."}
+                  </p>
+
+                  {sessionMessage && (
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {sessionMessage}
+                    </p>
+                  )}
+                </div>
+
+                {showNextButton && (
+                  <Button
+                    onClick={handleNext}
+                    disabled={movingNext}
+                    className="shrink-0"
+                  >
+                    {movingNext ? (
+                      <span className="flex items-center gap-2">
+                        <Loader />
+                        Loading...
+                      </span>
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!evaluation && sessionMessage && (
             <p className="text-sm text-slate-600 dark:text-slate-400">
               {sessionMessage}
             </p>
@@ -729,10 +1086,9 @@ export const CustomPracticeSession = () => {
         </Card>
       ) : (
         /* COMPLETION */
-
         <Card className="space-y-4">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-1 h-5 w-5 text-emerald-500" />
+            <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-500" />
 
             <div>
               <h3 className="text-lg font-semibold">
@@ -753,36 +1109,29 @@ export const CustomPracticeSession = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {session.status !== "ENDED" &&
-              session.status !== "EXPIRED" && (
-                <Button
-                  onClick={() => {
-                    if (
-                      !normalizedRouteSessionId
-                    ) {
-                      toast.error(
-                        "Invalid practice session ID."
-                      );
-                      return;
-                    }
+            <Button
+              onClick={() => {
+                sessionStorage.removeItem(
+                  `custom-practice-mode-${sessionId}`
+                );
 
-                    navigate(
-                      `/custom-practice/report/${normalizedRouteSessionId}`
-                    );
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    <Sparkles size={16} />
-                    View Report
-                  </span>
-                </Button>
-              )}
+                navigate(
+                  `/custom-practice/report/${normalizedRouteSessionId}`
+                );
+              }}
+            >
+              View Report
+            </Button>
 
             <Button
               variant="secondary"
-              onClick={() =>
-                navigate("/custom-practice")
-              }
+              onClick={() => {
+                sessionStorage.removeItem(
+                  `custom-practice-mode-${sessionId}`
+                );
+
+                navigate("/custom-practice");
+              }}
             >
               Back to Custom Practice
             </Button>
@@ -790,105 +1139,18 @@ export const CustomPracticeSession = () => {
         </Card>
       )}
 
-      {/* EVALUATION */}
-
-      {evaluation && (
-        <Card className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Evaluation
-              </p>
-
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {evaluation.status || "Reviewed"}
-              </p>
-            </div>
-
-            <span
-              className={`rounded-full px-3 py-1 text-sm font-medium ${
-                evaluationStyles[
-                  evaluation.status
-                ] ||
-                "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-              }`}
-            >
-              {evaluation.status}
-            </span>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
-              <p className="text-sm text-slate-500">
-                Score
-              </p>
-
-              <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {evaluation.score ?? "—"}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70">
-              <p className="text-sm text-slate-500">
-                Retry required
-              </p>
-
-              <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {evaluation.retryRequired
-                  ? "Yes"
-                  : "No"}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
-            <p className="font-medium text-slate-900 dark:text-slate-100">
-              Feedback
-            </p>
-
-            <p className="mt-2">
-              {evaluation.feedback ||
-                "No feedback was returned."}
-            </p>
-          </div>
-
-          {showNextButton && (
-            <div className="flex justify-end">
-              <Button
-                onClick={handleNext}
-                disabled={movingNext}
-              >
-                {movingNext ? (
-                  <span className="flex items-center gap-2">
-                    <Loader />
-                    Continuing...
-                  </span>
-                ) : (
-                  "Continue"
-                )}
-              </Button>
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* MODALS */}
-
       <PausePracticeModal
-        isOpen={pauseModalOpen}
-        onClose={() =>
-          setPauseModalOpen(false)
-        }
-        onPause={handlePause}
+        open={pauseModalOpen}
+        onClose={() => setPauseModalOpen(false)}
+        onConfirm={handlePause}
         loading={pauseLoading}
       />
 
       <EndPracticeModal
-        isOpen={endModalOpen}
-        onClose={() =>
-          setEndModalOpen(false)
-        }
-        onEnd={handleEnd}
+        open={endModalOpen}
+        onClose={() => setEndModalOpen(false)}
+        onConfirm={handleEnd}
         loading={endLoading}
       />
     </div>
