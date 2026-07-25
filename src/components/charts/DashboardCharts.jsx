@@ -126,7 +126,7 @@ export const DashboardHero = ({
     {
       title: "Start Practice",
       description:
-        "Start a guided conversation with your AI speaking partner.",
+        "Practice with an AI Friend, AI Teacher, or Interviewer for everyday English and job interviews.",
       stat: stats?.currentStreak ?? 0,
       statLabel:
         (stats?.currentStreak ?? 0) === 1 ? "day streak" : "days streak",
@@ -137,7 +137,7 @@ export const DashboardHero = ({
     {
       title: "Custom Practice",
       description:
-        "Create your own questions and practice exactly what you want.",
+        "Practice with your own questions and practice exactly what you want.",
       stat: stats?.practiceDays ?? 0,
       statLabel:
         (stats?.practiceDays ?? 0) === 1 ? "practice day" : "practice days",
@@ -177,7 +177,7 @@ export const DashboardHero = ({
 
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
           Welcome back, {userName}
-          <span className="ml-2">👋</span>
+          <span className="ml-2">!</span>
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400 sm:text-base">
