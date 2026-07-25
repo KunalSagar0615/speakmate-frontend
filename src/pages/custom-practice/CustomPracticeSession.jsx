@@ -265,43 +265,43 @@ export const CustomPracticeSession = () => {
     evaluation,
   ]);
 
-// =========================================================
-// AUTO-SPEAK EVERY NEW QUESTION IN VOICE MODE
-// =========================================================
+  // =========================================================
+  // AUTO-SPEAK EVERY NEW QUESTION IN VOICE MODE
+  // =========================================================
 
-useEffect(() => {
-  if (!isVoiceMode) return;
+  useEffect(() => {
+    if (!isVoiceMode) return;
 
-  if (!currentQuestionId || !currentQuestionText) {
-    return;
-  }
+    if (!currentQuestionId || !currentQuestionText) {
+      return;
+    }
 
-  // Do not speak the same question again because of a re-render.
-  if (spokenQuestionRef.current === currentQuestionId) {
-    return;
-  }
+    // Do not speak the same question again because of a re-render.
+    if (spokenQuestionRef.current === currentQuestionId) {
+      return;
+    }
 
-  // Stop anything left from the previous question.
-  stopListening();
-  stopSpeaking();
+    // Stop anything left from the previous question.
+    stopListening();
+    stopSpeaking();
 
-  const timer = setTimeout(() => {
-    spokenQuestionRef.current = currentQuestionId;
+    const timer = setTimeout(() => {
+      spokenQuestionRef.current = currentQuestionId;
 
-    speakText(currentQuestionText);
-  }, 600);
+      speakText(currentQuestionText);
+    }, 600);
 
-  return () => {
-    clearTimeout(timer);
-  };
-}, [
-  isVoiceMode,
-  currentQuestionId,
-  currentQuestionText,
-  speakText,
-  stopListening,
-  stopSpeaking,
-]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [
+    isVoiceMode,
+    currentQuestionId,
+    currentQuestionText,
+    speakText,
+    stopListening,
+    stopSpeaking,
+  ]);
 
   // =========================================================
   // CLEAN UP VOICE WHEN LEAVING
@@ -566,7 +566,7 @@ useEffect(() => {
       if (result?.sessionCompleted) {
         setSessionMessage(
           result.message ||
-            "Your practice session is complete."
+          "Your practice session is complete."
         );
 
         setShowNextButton(false);
@@ -681,9 +681,9 @@ useEffect(() => {
       setSession((current) =>
         current
           ? {
-              ...current,
-              status: result?.status || "ENDED",
-            }
+            ...current,
+            status: result?.status || "ENDED",
+          }
           : current
       );
 
@@ -745,11 +745,11 @@ useEffect(() => {
   const progress =
     totalQuestions > 0
       ? Math.min(
-          100,
-          Math.round(
-            (completedQuestions / totalQuestions) * 100
-          )
+        100,
+        Math.round(
+          (completedQuestions / totalQuestions) * 100
         )
+      )
       : 0;
 
   const questionNumber =
@@ -776,10 +776,9 @@ useEffect(() => {
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  statusStyles[session.status] ||
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[session.status] ||
                   "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                }`}
+                  }`}
               >
                 {session.status}
               </span>
@@ -1033,12 +1032,11 @@ useEffect(() => {
                     />
 
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        evaluationStyles[
-                          evaluation.status
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${evaluationStyles[
+                        evaluation.status
                         ] ||
                         "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                      }`}
+                        }`}
                     >
                       {evaluation.status
                         ?.replaceAll("_", " ") ||
@@ -1141,9 +1139,9 @@ useEffect(() => {
 
       {/* MODALS */}
       <PausePracticeModal
-        open={pauseModalOpen}
+        isOpen={pauseModalOpen}
         onClose={() => setPauseModalOpen(false)}
-        onConfirm={handlePause}
+        onPause={handlePause}
         loading={pauseLoading}
       />
 

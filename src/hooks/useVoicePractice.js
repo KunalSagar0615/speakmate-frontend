@@ -63,10 +63,11 @@ export const useVoicePractice = () => {
       }
 
       if (finalText) {
+        console.log("FINAL:", finalText);
+        console.log("CURRENT TRANSCRIPT:", transcript);
+
         setTranscript((prev) =>
-          `${prev}${
-            prev ? " " : ""
-          }${finalText.trim()}`
+          `${prev}${prev ? " " : ""}${finalText.trim()}`
         );
 
         setInterimTranscript("");
@@ -417,12 +418,10 @@ export const useVoicePractice = () => {
   // =========================================================
 
   const displayTranscript =
-    `${transcript}${
-      interimTranscript
-        ? `${
-            transcript ? " " : ""
-          }${interimTranscript}`
-        : ""
+    `${transcript}${interimTranscript
+      ? `${transcript ? " " : ""
+      }${interimTranscript}`
+      : ""
     }`;
 
   // =========================================================
