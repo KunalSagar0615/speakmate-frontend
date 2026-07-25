@@ -122,6 +122,19 @@ export const DashboardHero = ({
   onSessions,
   onReports,
 }) => {
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    if (hour < 21) return "Good Evening";
+
+    return "Good Night";
+  };
+
+  const greeting = getGreeting();
+
   const actions = [
     {
       title: "Start Practice",
@@ -176,8 +189,10 @@ export const DashboardHero = ({
         </p>
 
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-          Welcome back, {userName}
-          <span className="ml-2">!</span>
+          {greeting},{" "}
+          <span className="bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">
+            {userName}
+          </span>
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400 sm:text-base">
