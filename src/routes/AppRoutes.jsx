@@ -3,9 +3,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminLayout, AuthLayout, UserLayout } from "../layouts/Layouts";
 
 import LandingPage from "../pages/LandingPage";
+import HowToUse from "../components/landing/HowToUse";
+import { ContactPage } from "../pages/legal/ContactPage";
 
 import {
-  ContactPage,
   PrivacyPolicyPage,
   TermsServicesPage,
 } from "../pages/legal/LegalPages";
@@ -65,6 +66,11 @@ export default function AppRoutes() {
       <Route
         path="/contact"
         element={<ContactPage />}
+      />
+
+      <Route
+        path="/how-to-use"
+        element={<HowToUse />}
       />
 
       {/* =====================================================

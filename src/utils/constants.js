@@ -43,8 +43,8 @@ export const TOPIC_SUGGESTIONS_BY_MODE = {
   INTERVIEW: ["HR Interview", "Java Interview", "Spring Boot", "React Interview", "SQL Interview"],
 };
 
-export const FOUNDER_PROFILE_IMAGE =
-  "https://ui-avatars.com/api/?name=Kunal+Ananda+Sagar&size=200&background=0ea5e9&color=fff&bold=true";
+import identity from "../assets/identity.jpg";
+export const FOUNDER_PROFILE_IMAGE = identity;
 
 export const formatMode = (mode) => SESSION_MODE_LABELS[mode] || mode;
 export const formatDifficulty = (level) => DIFFICULTY_LABELS[level] || level;

@@ -45,10 +45,10 @@ export default function LandingFooter() {
             <ul className="space-y-3 text-sm">
               <li>
                 <Link
-                  to="/contact"
+                  to="/how-to-use"
                   className="text-slate-600 transition hover:text-primary dark:text-slate-400"
                 >
-                  Contact
+                  How to Use
                 </Link>
               </li>
 
@@ -57,7 +57,7 @@ export default function LandingFooter() {
                   to="/contact"
                   className="text-slate-600 transition hover:text-primary dark:text-slate-400"
                 >
-                  Support
+                  Contact
                 </Link>
               </li>
 
