@@ -739,22 +739,22 @@ export const CustomPracticeSession = () => {
   const showCompletionState = isTerminal;
 
   const totalQuestions = session?.totalQuestions || 0;
-  const completedQuestions =
-    session?.completedQuestions || 0;
+  const answeredQuestions =
+    session?.answeredQuestions || 0;
 
   const progress =
     totalQuestions > 0
       ? Math.min(
         100,
         Math.round(
-          (completedQuestions / totalQuestions) * 100
+          (answeredQuestions / totalQuestions) * 100
         )
       )
       : 0;
 
   const questionNumber =
     currentQuestion?.questionNumber ||
-    completedQuestions + 1;
+    answeredQuestions + 1;
 
   // =========================================================
   // UI
@@ -829,7 +829,7 @@ export const CustomPracticeSession = () => {
             <div className="mb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Progress</span>
               <span>
-                {completedQuestions}/{totalQuestions}
+                {answeredQuestions}/{totalQuestions}
               </span>
             </div>
 
