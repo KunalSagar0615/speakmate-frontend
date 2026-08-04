@@ -40,19 +40,7 @@ export default function HeroSection({
 
           {/* Trust Badges */}
           <div className="mt-4 flex flex-wrap gap-2">
-            {/* {[
-              "AI Powered",
-              "Interview Prep",
-              "English Practice",
-              "Progress Tracking",
-            ].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium shadow-sm dark:border-slate-700 dark:bg-slate-900"
-              >
-                ✓ {item}
-              </span>
-            ))} */}
+            
             <p className="flex gap-1">✓ <TypingAnimation phrases={HERO_PHRASES}/></p>
           </div>
 

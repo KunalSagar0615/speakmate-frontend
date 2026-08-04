@@ -113,28 +113,33 @@ export default function LandingPage() {
         </div>
       </header>
 
-      
-      <HeroSection serverReady={serverReady} isAuthenticated={isAuthenticated} AuthCTA={AuthCTA}/>
-      
-      <HowItWorks />
 
-      <ExploreSpeakMate />
+      <div className="relative overflow-hidden">
 
-      <StatsSection />
+        <HeroSection
+          serverReady={serverReady}
+          isAuthenticated={isAuthenticated}
+          AuthCTA={AuthCTA}
+        />
 
-      <TestimonialsSection />
+        <HowItWorks />
 
+        <ExploreSpeakMate />
 
-      <section id="faq">
-        <FAQSection />
-      </section>
+        <StatsSection />
 
-      
-      <CTASection
-        serverReady={serverReady}
-        isAuthenticated={isAuthenticated}
-        AuthCTA={AuthCTA}
-      />
+        <TestimonialsSection />
+
+        <section id="faq">
+          <FAQSection />
+        </section>
+
+        <CTASection
+          serverReady={serverReady}
+          isAuthenticated={isAuthenticated}
+          AuthCTA={AuthCTA}
+        />
+      </div>
 
       {/* Footer */}
       <LandingFooter />
