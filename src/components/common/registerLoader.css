@@ -1,0 +1,34 @@
+.pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 16px);
+  gap: 8px;
+}
+
+.pulse-grid span {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: #22c55e;
+  animation: pulseGrid 0.9s infinite ease-in-out;
+}
+
+.pulse-grid span:nth-child(2) { animation-delay: .1s; }
+.pulse-grid span:nth-child(3) { animation-delay: .2s; }
+.pulse-grid span:nth-child(4) { animation-delay: .3s; }
+.pulse-grid span:nth-child(5) { animation-delay: .4s; }
+.pulse-grid span:nth-child(6) { animation-delay: .5s; }
+.pulse-grid span:nth-child(7) { animation-delay: .6s; }
+.pulse-grid span:nth-child(8) { animation-delay: .7s; }
+.pulse-grid span:nth-child(9) { animation-delay: .8s; }
+
+@keyframes pulseGrid {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -6,6 +6,7 @@ import { Button, Card, Input } from "../../components/common/UI";
 import { useAuth } from "../../context/AuthContext";
 import { authService } from "../../services/authService";
 import { getErrorMessage } from "../../utils/errorMessages";
+import FullScreenLoader from "../../components/common/FullScreenLoader";
 
 const REGISTER_FIELDS = [
   { key: "name", label: "Name", autoComplete: "name" },
@@ -41,7 +42,7 @@ export const LoginPage = () => {
   const navigate = useNavigate();
 
   const [show, setShow] = useState(false);
-
+  const [loggingIn, setLoggingIn] = useState(false);
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -51,18 +52,33 @@ export const LoginPage = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
 
-    const data = await login({
-      username: form.username,
-      password: form.password,
-    });
+    if (loggingIn) return;
 
-    navigate(
-      data.role === "ADMIN"
-        ? "/admin"
-        : "/dashboard"
-    );
+    setLoggingIn(true);
+
+    try {
+      const data = await login({
+        username: form.username,
+        password: form.password,
+      });
+
+      navigate(
+        data.role === "ADMIN"
+          ? "/admin"
+          : "/dashboard"
+      );
+    } catch (error) {
+      setLoggingIn(false);
+    }
   };
-
+  if (loggingIn) {
+    return (
+      <FullScreenLoader
+        title="Signing you in..."
+        subtitle="Preparing your SpeakMate workspace..."
+      />
+    );
+  }
   return (
     <Card>
       <h2 className="text-2xl font-bold">
@@ -176,9 +192,9 @@ export const LoginPage = () => {
 
         <Button
           className="w-full"
-          disabled={loading}
+          disabled={loading || loggingIn}
         >
-          {loading
+          {loading || loggingIn
             ? "Logging in..."
             : "Login"}
         </Button>
@@ -199,6 +215,7 @@ export const LoginPage = () => {
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const [registering, setRegistering] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -220,6 +237,10 @@ export const RegisterPage = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
 
+    if (registering) return;
+
+    setRegistering(true);
+
     try {
       await authService.register(form);
 
@@ -233,12 +254,20 @@ export const RegisterPage = () => {
         },
       });
     } catch (error) {
-      toast.error(
-        getErrorMessage(error)
-      );
+      toast.error(getErrorMessage(error));
+
+      setRegistering(false);
     }
   };
 
+  if (registering) {
+    return (
+      <FullScreenLoader
+        title="Preparing your SpeakMate account..."
+        subtitle="Sending verification OTP..."
+      />
+    );
+  }
   return (
     <Card>
       <h2 className="text-2xl font-bold">
@@ -277,7 +306,10 @@ export const RegisterPage = () => {
           )
         )}
 
-        <Button className="md:col-span-2">
+        <Button
+          className="md:col-span-2"
+          disabled={registering}
+        >
           Register
         </Button>
       </form>

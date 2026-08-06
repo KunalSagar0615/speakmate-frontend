@@ -17,16 +17,6 @@ import ExploreSpeakMate from "../components/landing/ExploreSpeakMate";
 const AuthCTA = ({ className = "" }) => {
   const { isAuthenticated } = useAuth();
 
-  if (isAuthenticated) {
-    return (
-      <Link to="/practice">
-        <Button className={`gap-2 ${className}`}>
-          Start Practice <ArrowRight size={16} />
-        </Button>
-      </Link>
-    );
-  }
-
   return (
     <Link to="/register">
       <Button className={`gap-2 ${className}`}>
@@ -90,19 +80,13 @@ export default function LandingPage() {
                   </Button>
                 </Link>
 
-                {isAuthenticated ? (
-                  <Link to="/practice">
-                    <Button>
-                      Start Practice
-                    </Button>
-                  </Link>
-                ) : (
+              
                   <Link to="/register">
                     <Button>
                       Register
                     </Button>
                   </Link>
-                )}
+              
               </>
             ) : (
               <div className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
