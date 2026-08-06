@@ -80,17 +80,29 @@ export default function LandingPage() {
                   </Button>
                 </Link>
 
-              
-                  <Link to="/register">
-                    <Button>
-                      Register
-                    </Button>
-                  </Link>
-              
+
+                <Link to="/register">
+                  <Button>
+                    Register
+                  </Button>
+                </Link>
+
               </>
             ) : (
-              <div className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                🚀 Preparing AI services...
+              <div className="flex items-center gap-3 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/30">
+                <span>Preparing AI services...</span>
+
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-amber-600"></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
+                    style={{ animationDelay: "0.15s" }}
+                  ></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
+                    style={{ animationDelay: "0.3s" }}
+                  ></span>
+                </div>
               </div>
             )}
           </div>

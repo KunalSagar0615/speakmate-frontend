@@ -40,8 +40,8 @@ export default function HeroSection({
 
           {/* Trust Badges */}
           <div className="mt-4 flex flex-wrap gap-2">
-            
-            <p className="flex gap-1">✓ <TypingAnimation phrases={HERO_PHRASES}/></p>
+
+            <p className="flex gap-1">✓ <TypingAnimation phrases={HERO_PHRASES} /></p>
           </div>
 
           {/* Buttons */}
@@ -57,8 +57,20 @@ export default function HeroSection({
                 </Link>
               </>
             ) : (
-              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                🚀 Preparing AI services...
+              <div className="flex items-center gap-3 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/30">
+                <span>Preparing AI services...</span>
+
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-amber-600"></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
+                    style={{ animationDelay: "0.15s" }}
+                  ></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
+                    style={{ animationDelay: "0.3s" }}
+                  ></span>
+                </div>
               </div>
             )}
           </div>
@@ -67,8 +79,8 @@ export default function HeroSection({
           <div className="mt-4">
             <div
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium ${serverReady
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                 }`}
             >
               <span className="h-2 w-2 rounded-full bg-current"></span>
