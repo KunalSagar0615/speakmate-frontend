@@ -57,19 +57,13 @@ export default function HeroSection({
                 </Link>
               </>
             ) : (
-              <div className="flex items-center gap-3 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/30">
-                <span>Preparing AI services...</span>
+              <div className="rounded-lg bg-amber-100 px-3 py-2 dark:bg-amber-900/30">
+                <div className="mb-2 text-sm font-medium text-amber-700">
+                  Preparing AI services...
+                </div>
 
-                <div className="flex gap-1">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-amber-600"></span>
-                  <span
-                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
-                    style={{ animationDelay: "0.15s" }}
-                  ></span>
-                  <span
-                    className="h-2 w-2 animate-bounce rounded-full bg-amber-600"
-                    style={{ animationDelay: "0.3s" }}
-                  ></span>
+                <div className="h-1.5 overflow-hidden rounded-full bg-amber-200">
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-amber-600"></div>
                 </div>
               </div>
             )}
