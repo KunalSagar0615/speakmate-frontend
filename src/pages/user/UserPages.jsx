@@ -199,9 +199,24 @@ export const UserDashboardPage = () => {
           reportsGenerated: analytics?.reportsGenerated ?? 0,
         }}
         userName={user?.name || user?.username || "User"}
-        onStartPractice={() => navigate("/practice")}
+        onFriendPractice={() =>
+          navigate("/practice", {
+            state: { defaultMode: "FRIEND" },
+          })
+        }
+
+        onTeacherPractice={() =>
+          navigate("/practice", {
+            state: { defaultMode: "ENGLISH_COACH" },
+          })
+        }
+
+        onInterviewerPractice={() =>
+          navigate("/practice", {
+            state: { defaultMode: "INTERVIEW" },
+          })
+        }
         onCustomPractice={() => navigate("/custom-practice")}
-        onSessions={() => navigate("/sessions")}
         onReports={() => navigate("/reports")}
       />
 
@@ -233,7 +248,9 @@ export const UserDashboardPage = () => {
 export const StartPracticePage = () => {
   const { userId } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("");
+  const location = useLocation();
+  const defaultMode = location.state?.defaultMode || "";
+  const [mode, setMode] = useState(defaultMode);
   const [communicationType, setCommunicationType] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState("");
   const [topic, setTopic] = useState("");
@@ -248,6 +265,12 @@ export const StartPracticePage = () => {
     setMode(newMode);
     setTopic("");
   };
+
+  useEffect(() => {
+    if (mode === "ENGLISH_COACH") {
+      setCommunicationType("CHAT");
+    }
+  }, [mode]);
 
   const createSession = async () => {
     if (!topic.trim()) {
@@ -284,20 +307,20 @@ export const StartPracticePage = () => {
       </div>
 
       <div className="space-y-6">
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">Step 1</p>
-          <RadioGroup
-            label="Select Mode"
-            name="practice-mode"
-            options={MODE_OPTIONS}
-            value={mode}
-            onChange={handleModeChange}
-          />
-        </div>
-
-        {mode && (
+        {!defaultMode && (
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">Step 2</p>
+            <RadioGroup
+              label="Select Mode"
+              name="practice-mode"
+              options={MODE_OPTIONS}
+              value={mode}
+              onChange={handleModeChange}
+            />
+          </div>
+        )}
+
+        {mode && mode !== "ENGLISH_COACH" && (
+          <div>
             <RadioGroup
               label="Select Communication Type"
               name="communication-type"
@@ -308,46 +331,47 @@ export const StartPracticePage = () => {
           </div>
         )}
 
-        {mode && communicationType && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">Step 3</p>
-            <RadioGroup
-              label="Select Difficulty"
-              name="difficulty-level"
-              options={DIFFICULTY_OPTIONS}
-              value={difficultyLevel}
-              onChange={setDifficultyLevel}
-            />
-          </div>
-        )}
-
-        {mode && communicationType && difficultyLevel && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">Step 4</p>
-            <Input
-              label="Topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. Java Interview, Daily Conversation"
-              autoComplete="off"
-            />
-            <div className="mt-3 flex flex-wrap gap-2">
-              {topicSuggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setTopic(suggestion)}
-                  className="rounded-full border border-sky-200 px-3 py-1 text-xs text-sky-700 transition hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
-                >
-                  {suggestion}
-                </button>
-              ))}
+        {mode &&
+          (mode === "ENGLISH_COACH" || communicationType) && (
+            <div>
+              <RadioGroup
+                label="Select Difficulty"
+                name="difficulty-level"
+                options={DIFFICULTY_OPTIONS}
+                value={difficultyLevel}
+                onChange={setDifficultyLevel}
+              />
             </div>
-            <Button className="mt-4" onClick={createSession} disabled={creating || !topic.trim()}>
-              {creating ? "Creating..." : "Create Session"}
-            </Button>
-          </div>
-        )}
+          )}
+
+        {mode &&
+          (mode === "ENGLISH_COACH" || communicationType) &&
+          difficultyLevel && (
+            <div>
+              <Input
+                label="Topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Enter a topic for practice"
+                autoComplete="off"
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topicSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => setTopic(suggestion)}
+                    className="rounded-full border border-sky-200 px-3 py-1 text-xs text-sky-700 transition hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+              <Button className="mt-4" onClick={createSession} disabled={creating || !topic.trim()}>
+                {creating ? "Creating..." : "Create Session"}
+              </Button>
+            </div>
+          )}
       </div>
     </Card>
   );
@@ -973,8 +997,8 @@ export const ReportsPage = () => {
             <Card
               key={session.id}
               className={`cursor-pointer transition hover:ring-2 hover:ring-primary/30 ${String(selectedSessionId) === String(session.id)
-                  ? "ring-2 ring-primary"
-                  : ""
+                ? "ring-2 ring-primary"
+                : ""
                 }`}
               onClick={() => handleSelectSession(session)}
             >
@@ -1507,11 +1531,10 @@ export const SettingsPage = () => {
           <button
             type="button"
             onClick={() => setTheme("light")}
-            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
-              theme === "light"
-                ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
-                : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-            }`}
+            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${theme === "light"
+              ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
+              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+              }`}
           >
 
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-950/30">
@@ -1531,11 +1554,10 @@ export const SettingsPage = () => {
             </div>
 
             <div
-              className={`ml-auto h-4 w-4 rounded-full border-2 ${
-                theme === "light"
-                  ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
-                  : "border-slate-300 dark:border-slate-600"
-              }`}
+              className={`ml-auto h-4 w-4 rounded-full border-2 ${theme === "light"
+                ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
+                : "border-slate-300 dark:border-slate-600"
+                }`}
             />
 
           </button>
@@ -1545,11 +1567,10 @@ export const SettingsPage = () => {
           <button
             type="button"
             onClick={() => setTheme("dark")}
-            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${
-              theme === "dark"
-                ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
-                : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-            }`}
+            className={`group flex items-center gap-4 rounded-2xl border p-4 text-left transition-all ${theme === "dark"
+              ? "border-sky-400 bg-sky-50 ring-2 ring-sky-500/10 dark:bg-sky-950/20"
+              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+              }`}
           >
 
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 dark:bg-indigo-950/30 dark:text-indigo-400">
@@ -1570,11 +1591,10 @@ export const SettingsPage = () => {
             </div>
 
             <div
-              className={`ml-auto h-4 w-4 rounded-full border-2 ${
-                theme === "dark"
-                  ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
-                  : "border-slate-300 dark:border-slate-600"
-              }`}
+              className={`ml-auto h-4 w-4 rounded-full border-2 ${theme === "dark"
+                ? "border-sky-500 bg-sky-500 ring-4 ring-sky-500/10"
+                : "border-slate-300 dark:border-slate-600"
+                }`}
             />
 
           </button>

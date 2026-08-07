@@ -1,8 +1,10 @@
 import {
   ArrowUpRight,
+  Briefcase,
   CalendarDays,
   FileBarChart2,
   Flame,
+  GraduationCap,
   MessageCircle,
   Sparkles,
   Waves,
@@ -117,9 +119,10 @@ const DashboardActionCard = ({
 export const DashboardHero = ({
   stats,
   userName = "User",
-  onStartPractice,
+  onFriendPractice,
+  onTeacherPractice,
+  onInterviewerPractice,
   onCustomPractice,
-  onSessions,
   onReports,
 }) => {
 
@@ -137,15 +140,36 @@ export const DashboardHero = ({
 
   const actions = [
     {
-      title: "Start Practice",
+      title: "Practice with AI Friend",
       description:
-        "Practice with an AI Friend, AI Teacher, or Interviewer for everyday English and job interviews.",
+        "Practice everyday English conversations with your AI Friend.",
+      icon: MessageCircle,
       stat: stats?.currentStreak ?? 0,
       statLabel:
         (stats?.currentStreak ?? 0) === 1 ? "day streak" : "days streak",
-      icon: MessageCircle,
       statIcon: Flame,
-      onClick: onStartPractice,
+      onClick: onFriendPractice,
+    },
+    {
+      title: "Practice with AI Teacher",
+      description:
+        "Improve your grammar, vocabulary and spoken English.",
+      icon: GraduationCap,
+      stat: stats?.practiceDays ?? 0,
+      statLabel:
+        (stats?.practiceDays ?? 0) === 1 ? "practice day" : "practice days",
+      statIcon: CalendarDays,
+      onClick: onTeacherPractice,
+    },
+    {
+      title: "Practice with Interviewer",
+      description:
+        "Prepare for HR and technical interviews with AI.",
+      icon: Briefcase,
+      stat: stats?.totalSessions ?? 0,
+      statLabel: "completed sessions",
+      statIcon: Waves,
+      onClick: onInterviewerPractice,
     },
     {
       title: "Custom Practice",
@@ -157,16 +181,6 @@ export const DashboardHero = ({
       icon: Sparkles,
       statIcon: CalendarDays,
       onClick: onCustomPractice,
-    },
-    {
-      title: "Sessions",
-      description:
-        "Review your previous conversations and practice history.",
-      stat: stats?.totalSessions ?? 0,
-      statLabel: "completed sessions",
-      icon: Waves,
-      statIcon: Waves,
-      onClick: onSessions,
     },
     {
       title: "Reports",
