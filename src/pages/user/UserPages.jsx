@@ -134,54 +134,46 @@ export const UserDashboardPage = () => {
   const { userId, user } = useAuth();
   const navigate = useNavigate();
 
-  const [sessions, setSessions] = useState([]);
   const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [heatmapLoading, setHeatmapLoading] = useState(true);
+  const ANALYTICS_CACHE_KEY = `speakmate_dashboard_analytics_${userId}`;
 
   useEffect(() => {
     if (!userId) {
-      setLoading(false);
       return;
     }
 
+    const cachedAnalytics = localStorage.getItem(ANALYTICS_CACHE_KEY);
+    if (cachedAnalytics) {
+      try {
+        const parsed = JSON.parse(cachedAnalytics);
+        setAnalytics(parsed);
+        setHeatmapLoading(false);
+      } catch {
+        localStorage.removeItem(ANALYTICS_CACHE_KEY);
+      }
+    }
+
     (async () => {
-      setLoading(true);
       setError("");
 
       try {
-        sessionService
-          .getByUserId(userId)
-          .then(setSessions)
-          .catch(() => setSessions([]));
-
-        dashboardService
-          .getAnalytics()
-          .then((data) => {
-            setAnalytics(data);
-            setHeatmapLoading(false);
-          })
-          .catch(() => {
-            setAnalytics(null);
-            setHeatmapLoading(false);
-          });
+        const data = await dashboardService.getAnalytics();
+        setAnalytics(data);
+        localStorage.setItem(
+          ANALYTICS_CACHE_KEY,
+          JSON.stringify(data)
+        );
       } catch {
         setError("Unable to load dashboard data.");
-        setSessions([]);
-        setHeatmapLoading(false);
-        setAnalytics(null);
       } finally {
-        setLoading(false);
+        setHeatmapLoading(false);
       }
     })();
+
   }, [userId]);
 
-  const completedSessions = useMemo(
-    () => sessions.filter((session) => session.status === "COMPLETED").length,
-    [sessions]
-  );
-
-  const [heatmapLoading, setHeatmapLoading] = useState(true);
 
   if (error) {
     return (
@@ -271,7 +263,11 @@ export const StartPracticePage = () => {
   useEffect(() => {
     if (mode === "ENGLISH_COACH") {
       setCommunicationType("CHAT");
+    } else {
+      setCommunicationType("");
     }
+    setDifficultyLevel("");
+    setTopic("");
   }, [mode]);
 
   const createSession = async () => {
@@ -737,6 +733,7 @@ export const SessionsPage = () => {
   const { userId } = useAuth();
   const [rows, setRows] = useState([]);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   const loadSessions = async () => {
     if (!userId) return;
@@ -850,15 +847,15 @@ export const ReportsPage = () => {
   const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const sessionIdParam = searchParams.get("session");
-  const [sessions, setSessions] = useState([]);
   const [questionCounts, setQuestionCounts] = useState({});
   const [modeFilter, setModeFilter] = useState("ALL");
   const [selectedSessionId, setSelectedSessionId] = useState(sessionIdParam || null);
   const [conversations, setConversations] = useState([]);
   const [aiReport, setAiReport] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const MODE_FILTER_OPTIONS = [
     { value: "ALL", label: "All Modes" },
@@ -1156,10 +1153,11 @@ export const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
 
   const {
-    user: cachedUser,
-    setUser,
-    logout,
-  } = useAuth();
+  userId,
+  user: cachedUser,
+  setUser,
+  logout,
+} = useAuth();
 
   const navigate = useNavigate();
 
@@ -1344,7 +1342,9 @@ export const SettingsPage = () => {
 
   const handleLogout = () => {
     window.speechSynthesis?.cancel();
-
+    localStorage.removeItem(
+      `speakmate_dashboard_analytics_${userId}`
+    );
     logout();
     navigate("/login");
   };
