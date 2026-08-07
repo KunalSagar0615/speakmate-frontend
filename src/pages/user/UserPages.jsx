@@ -150,16 +150,25 @@ export const UserDashboardPage = () => {
       setError("");
 
       try {
-        const [userSessions, analyticsData] = await Promise.all([
-          sessionService.getByUserId(userId),
-          dashboardService.getAnalytics(),
-        ]);
+        sessionService
+          .getByUserId(userId)
+          .then(setSessions)
+          .catch(() => setSessions([]));
 
-        setSessions(userSessions);
-        setAnalytics(analyticsData);
+        dashboardService
+          .getAnalytics()
+          .then((data) => {
+            setAnalytics(data);
+            setHeatmapLoading(false);
+          })
+          .catch(() => {
+            setAnalytics(null);
+            setHeatmapLoading(false);
+          });
       } catch {
         setError("Unable to load dashboard data.");
         setSessions([]);
+        setHeatmapLoading(false);
         setAnalytics(null);
       } finally {
         setLoading(false);
@@ -172,13 +181,7 @@ export const UserDashboardPage = () => {
     [sessions]
   );
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader />
-      </div>
-    );
-  }
+  const [heatmapLoading, setHeatmapLoading] = useState(true);
 
   if (error) {
     return (
@@ -192,11 +195,10 @@ export const UserDashboardPage = () => {
     <div className="space-y-8">
       <DashboardHero
         stats={{
-          currentStreak: analytics?.currentStreak ?? 0,
-          totalSessions:
-            completedSessions || analytics?.totalSessions || 0,
-          practiceDays: analytics?.totalPracticeDays ?? 0,
-          reportsGenerated: analytics?.reportsGenerated ?? 0,
+          currentStreak: analytics?.currentStreak ?? "...",
+          totalSessions: analytics?.totalSessions ?? "...",
+          practiceDays: analytics?.totalPracticeDays ?? "...",
+          reportsGenerated: analytics?.reportsGenerated ?? "...",
         }}
         userName={user?.name || user?.username || "User"}
         onFriendPractice={() =>
@@ -221,25 +223,25 @@ export const UserDashboardPage = () => {
       />
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-sky-500">
-              Your Consistency
-            </p>
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-sky-500">
+            Your Consistency
+          </p>
 
-            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
-              Activity Heatmap
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Every practice day moves you one step forward.
-            </p>
-          </div>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Every practice day moves you one step forward.
+          </p>
         </div>
 
-        <ActivityHeatmap
-          activityHeatmap={analytics?.activityHeatmap || {}}
-        />
+        {heatmapLoading ? (
+          <div className="flex justify-center py-10">
+            <Loader />
+          </div>
+        ) : (
+          <ActivityHeatmap
+            activityHeatmap={analytics?.activityHeatmap || {}}
+          />
+        )}
       </section>
     </div>
   );
@@ -734,12 +736,10 @@ export const VoicePracticePage = () => {
 export const SessionsPage = () => {
   const { userId } = useAuth();
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const loadSessions = async () => {
     if (!userId) return;
-    setLoading(true);
     try {
       const data = await sessionService.getByUserId(userId);
       setRows(data);
@@ -752,7 +752,6 @@ export const SessionsPage = () => {
 
   useEffect(() => {
     if (!userId) {
-      setLoading(false);
       return;
     }
     loadSessions();
