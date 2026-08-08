@@ -1002,13 +1002,14 @@ export const SessionDetailsPage = () => {
 export const ReportsPage = () => {
   const { userId } = useAuth();
   const navigate = useNavigate();
-
   const [searchParams, setSearchParams] = useSearchParams();
 
   const sessionIdParam = searchParams.get("session");
 
+  const [sessions, setSessions] = useState([]);
   const [questionCounts, setQuestionCounts] = useState({});
   const [modeFilter, setModeFilter] = useState("ALL");
+
   const [selectedSessionId, setSelectedSessionId] = useState(
     sessionIdParam || null
   );
@@ -1016,13 +1017,9 @@ export const ReportsPage = () => {
   const [conversations, setConversations] = useState([]);
   const [aiReport, setAiReport] = useState(null);
 
+  const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
-
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const previewRef = useRef(null);
 
   const MODE_FILTER_OPTIONS = [
     { value: "ALL", label: "All Modes" },
@@ -1031,13 +1028,13 @@ export const ReportsPage = () => {
     { value: "ENGLISH_COACH", label: "ENGLISH_COACH" },
   ];
 
-  // --------------------------------------------------
-  // COMPLETED REPORTS
-  // --------------------------------------------------
+  // =========================================================
+  // COMPLETED REPORT SESSIONS
+  // =========================================================
 
   const reportSessions = useMemo(() => {
     const completed = sessions.filter(
-      (s) => s.status === "COMPLETED"
+      (session) => session.status === "COMPLETED"
     );
 
     if (modeFilter === "ALL") {
@@ -1045,26 +1042,35 @@ export const ReportsPage = () => {
     }
 
     return completed.filter(
-      (s) => s.mode === modeFilter
+      (session) => session.mode === modeFilter
     );
   }, [sessions, modeFilter]);
 
-  // --------------------------------------------------
+  // =========================================================
   // SELECTED SESSION
-  // --------------------------------------------------
+  //
+  // IMPORTANT:
+  // Find directly from sessions instead of reportSessions.
+  // This makes /reports?session=6 reliable.
+  // =========================================================
 
-  const selectedSession = useMemo(
-    () =>
-      reportSessions.find(
-        (s) =>
-          String(s.id) === String(selectedSessionId)
-      ) || null,
-    [reportSessions, selectedSessionId]
-  );
+  const selectedSession = useMemo(() => {
+    if (!selectedSessionId) {
+      return null;
+    }
 
-  // --------------------------------------------------
+    return (
+      sessions.find(
+        (session) =>
+          String(session.id) ===
+          String(selectedSessionId)
+      ) || null
+    );
+  }, [sessions, selectedSessionId]);
+
+  // =========================================================
   // LOAD SESSIONS
-  // --------------------------------------------------
+  // =========================================================
 
   useEffect(() => {
     if (!userId) {
@@ -1072,16 +1078,33 @@ export const ReportsPage = () => {
       return;
     }
 
+    setLoading(true);
+
     sessionService
       .getByUserId(userId)
-      .then(setSessions)
-      .catch(() => setSessions([]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        setSessions(data || []);
+      })
+      .catch(() => {
+        setSessions([]);
+        toast.error("Unable to load sessions.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [userId]);
 
-  // --------------------------------------------------
+  // =========================================================
+  // SYNC URL WITH SELECTED SESSION
+  // =========================================================
+
+  useEffect(() => {
+    setSelectedSessionId(sessionIdParam || null);
+  }, [sessionIdParam]);
+
+  // =========================================================
   // LOAD QUESTION COUNTS
-  // --------------------------------------------------
+  // =========================================================
 
   useEffect(() => {
     if (!reportSessions.length) {
@@ -1089,42 +1112,42 @@ export const ReportsPage = () => {
       return;
     }
 
+    let cancelled = false;
+
     Promise.all(
       reportSessions.map(async (session) => {
         try {
           const summary =
-            await sessionService.getSummary(session.id);
+            await sessionService.getSummary(
+              session.id
+            );
 
           return [
             session.id,
-            summary.totalQuestions ??
-            summary.totalConversations ??
-            0,
+            summary?.totalQuestions ??
+              summary?.totalConversations ??
+              0,
           ];
         } catch {
           return [session.id, 0];
         }
       })
-    ).then((entries) =>
-      setQuestionCounts(
-        Object.fromEntries(entries)
-      )
-    );
+    ).then((entries) => {
+      if (!cancelled) {
+        setQuestionCounts(
+          Object.fromEntries(entries)
+        );
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [reportSessions]);
 
-  // --------------------------------------------------
-  // URL SESSION PARAMETER
-  // --------------------------------------------------
-
-  useEffect(() => {
-    if (sessionIdParam) {
-      setSelectedSessionId(sessionIdParam);
-    }
-  }, [sessionIdParam]);
-
-  // --------------------------------------------------
-  // LOAD REPORT DETAILS
-  // --------------------------------------------------
+  // =========================================================
+  // LOAD SELECTED REPORT
+  // =========================================================
 
   useEffect(() => {
     if (!selectedSession?.id) {
@@ -1133,7 +1156,11 @@ export const ReportsPage = () => {
       return;
     }
 
+    let cancelled = false;
+
     setDetailLoading(true);
+    setConversations([]);
+    setAiReport(null);
 
     Promise.all([
       conversationService.getBySession(
@@ -1144,62 +1171,95 @@ export const ReportsPage = () => {
         .getReport(selectedSession.id)
         .catch(() => null),
     ])
-      .then(([convData, reportData]) => {
-        setConversations(convData || []);
-        setAiReport(reportData);
+      .then(([conversationData, reportData]) => {
+        if (cancelled) return;
+
+        setConversations(
+          Array.isArray(conversationData)
+            ? conversationData
+            : []
+        );
+
+        setAiReport(reportData || null);
       })
       .catch(() => {
+        if (cancelled) return;
+
         setConversations([]);
         setAiReport(null);
+
+        toast.error(
+          "Unable to load this report."
+        );
       })
       .finally(() => {
-        setDetailLoading(false);
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSession?.id]);
 
-  // --------------------------------------------------
+  // =========================================================
   // VIEW REPORT
-  // --------------------------------------------------
+  // =========================================================
 
   const handleViewReport = (session) => {
     const id = String(session.id);
 
     setSelectedSessionId(id);
 
-    setSearchParams({ session: id });
+    setSearchParams({
+      session: id,
+    });
 
-    // Give React time to render the preview.
-    setTimeout(() => {
-      previewRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 100);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
-  // --------------------------------------------------
-  // DOWNLOAD REPORT
-  // --------------------------------------------------
+  // =========================================================
+  // BACK TO ALL REPORTS
+  // =========================================================
+
+  const handleBackToReports = () => {
+    setSelectedSessionId(null);
+    setSearchParams({});
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // =========================================================
+  // DOWNLOAD PDF
+  // =========================================================
 
   const handleDownload = async (session) => {
     setDownloadingId(session.id);
 
     try {
-      const [convData, reportData] =
-        await Promise.all([
-          conversationService.getBySession(
-            session.id
-          ),
+      const [
+        conversationData,
+        reportData,
+      ] = await Promise.all([
+        conversationService.getBySession(
+          session.id
+        ),
 
-          sessionService
-            .getReport(session.id)
-            .catch(() => null),
-        ]);
+        sessionService
+          .getReport(session.id)
+          .catch(() => null),
+      ]);
 
       reportService.downloadPdf(
         session,
-        convData,
-        reportData
+        conversationData || [],
+        reportData || null
       );
 
       toast.success(
@@ -1214,295 +1274,572 @@ export const ReportsPage = () => {
     }
   };
 
-  // --------------------------------------------------
+  // =========================================================
   // LOADING
-  // --------------------------------------------------
+  // =========================================================
 
   if (loading) {
     return (
-      <div className="flex min-h-[30vh] items-center justify-center">
+      <div className="flex min-h-[40vh] items-center justify-center">
         <PulseGridLoader />
       </div>
     );
   }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  // =========================================================
+  // SINGLE REPORT VIEW
+  // /reports?session=6
+  // =========================================================
 
-  return (
-  <div className="space-y-5">
+  if (sessionIdParam) {
+    if (!selectedSession) {
+      return (
+        <div className="space-y-5">
 
-    {sessionIdParam && selectedSession ? (
-      /* =====================================================
-         SINGLE SESSION REPORT
-      ===================================================== */
-      <Card className="space-y-6">
+          <Card>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
 
-        {/* HEADER */}
-
-        <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-
-          <div>
-            <p className="text-sm font-semibold text-sky-500">
-              Practice Completed
-            </p>
-
-            <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-              Your Practice Report
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {selectedSession.topic}
-            </p>
-          </div>
-
-          <StatusBadge
-            status={selectedSession.status}
-          />
-
-        </div>
-
-        {/* LOADING */}
-
-        {detailLoading ? (
-          <div className="flex justify-center py-10">
-            <PulseGridLoader />
-          </div>
-        ) : (
-          <>
-
-            {/* SESSION INFORMATION */}
-
-            <div className="grid gap-3 sm:grid-cols-2">
-
-              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-medium text-slate-500">
-                  Topic
-                </p>
-
-                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                  {selectedSession.topic}
-                </p>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                <BarChart3
+                  size={25}
+                  className="text-slate-400"
+                />
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-medium text-slate-500">
-                  Mode
-                </p>
+              <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
+                Report Not Found
+              </h2>
 
-                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                  {formatMode(selectedSession.mode)}
-                </p>
-              </div>
+              <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
+                We couldn't find the requested
+                practice session.
+              </p>
 
-              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-medium text-slate-500">
-                  Status
-                </p>
-
-                <div className="mt-1">
-                  <StatusBadge
-                    status={selectedSession.status}
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-medium text-slate-500">
-                  Total Questions
-                </p>
-
-                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                  {
-                    reportService
-                      .getAnsweredConversations(
-                        conversations
-                      ).length
-                  }
-                </p>
-              </div>
+              <Button
+                type="button"
+                className="mt-5"
+                onClick={() =>
+                  navigate("/reports")
+                }
+              >
+                Back to Reports
+              </Button>
 
             </div>
+          </Card>
 
-            {/* AI REPORT */}
+        </div>
+      );
+    }
 
-            {aiReport?.overallEvaluation && (
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+    const answeredConversations =
+      reportService.getAnsweredConversations(
+        conversations
+      );
 
-                <p className="font-semibold text-sky-700 dark:text-sky-300">
-                  Overall Evaluation
-                </p>
+    return (
+      <div className="space-y-5">
 
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  {aiReport.overallEvaluation}
-                </p>
+        {/* ===================================================
+            REPORT HEADER
+        =================================================== */}
 
-              </div>
-            )}
+        <Card>
 
-            {/* STRENGTHS */}
-
-            {aiReport?.strengths && (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-
-                <p className="font-semibold text-emerald-700 dark:text-emerald-300">
-                  Strengths
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  {aiReport.strengths}
-                </p>
-
-              </div>
-            )}
-
-            {/* IMPROVEMENT */}
-
-            {aiReport?.areasOfImprovement && (
-              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-900/40 dark:bg-rose-950/20">
-
-                <p className="font-semibold text-rose-700 dark:text-rose-300">
-                  Areas Of Improvement
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  {aiReport.areasOfImprovement}
-                </p>
-
-              </div>
-            )}
-
-            {/* RECOMMENDATIONS */}
-
-            {aiReport?.recommendations && (
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
-
-                <p className="font-semibold text-sky-700 dark:text-sky-300">
-                  Recommendations
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  {aiReport.recommendations}
-                </p>
-
-              </div>
-            )}
-
-            {/* QUESTIONS */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
 
-              <h3 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">
-                Question-by-Question Feedback
-              </h3>
+              <p className="text-sm font-semibold text-sky-500">
+                Practice Completed
+              </p>
 
-              <div className="space-y-4">
+              <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                Your Practice Report
+              </h1>
 
-                {reportService
-                  .getAnsweredConversations(
-                    conversations
-                  )
-                  .map((item, index) => (
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {selectedSession.topic ||
+                  "Practice Session"}
+              </p>
 
-                    <div
-                      key={item.id || index}
-                      className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
-                    >
+            </div>
 
-                      <p className="font-semibold text-sky-600 dark:text-sky-400">
-                        Q{index + 1}:{" "}
-                        {item.aiQuestion ||
-                          item.question}
-                      </p>
+            <StatusBadge
+              status={selectedSession.status}
+            />
 
-                      <div className="mt-3">
+          </div>
 
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                          Your Answer
-                        </p>
+        </Card>
 
-                        <p className="rounded-xl bg-slate-100 p-3 text-sm leading-6 dark:bg-slate-800 dark:text-slate-200">
-                          {item.userAnswer ||
-                            item.answer ||
-                            "No answer"}
-                        </p>
+        {/* ===================================================
+            REPORT CONTENT
+        =================================================== */}
 
-                      </div>
+        <Card className="space-y-6">
 
-                      {(item.aiFeedback ||
-                        item.feedback) && (
-                        <div className="mt-3">
+          {detailLoading ? (
+            <div className="flex justify-center py-12">
+              <PulseGridLoader />
+            </div>
+          ) : (
+            <>
 
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            AI Feedback
-                          </p>
+              {/* SESSION SUMMARY */}
 
-                          <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
-                            {item.aiFeedback ||
-                              item.feedback}
-                          </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
-                        </div>
-                      )}
+                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
 
-                    </div>
+                  <p className="text-xs font-medium text-slate-500">
+                    Topic
+                  </p>
 
-                  ))}
+                  <p className="mt-1 break-words font-semibold text-slate-900 dark:text-white">
+                    {selectedSession.topic ||
+                      "-"}
+                  </p>
+
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+
+                  <p className="text-xs font-medium text-slate-500">
+                    Mode
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                    {formatMode(
+                      selectedSession.mode
+                    )}
+                  </p>
+
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+
+                  <p className="text-xs font-medium text-slate-500">
+                    Difficulty
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                    {formatDifficulty(
+                      selectedSession.difficultyLevel
+                    )}
+                  </p>
+
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+
+                  <p className="text-xs font-medium text-slate-500">
+                    Questions
+                  </p>
+
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                    {answeredConversations.length}
+                  </p>
+
+                </div>
 
               </div>
 
-            </div>
+              {/* =================================================
+                  AI OVERALL REPORT
+              ================================================= */}
 
-            {/* ACTIONS */}
+              {aiReport?.overallEvaluation && (
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
 
-            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
+                  <p className="font-semibold text-sky-700 dark:text-sky-300">
+                    Overall Evaluation
+                  </p>
 
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => navigate("/dashboard")}
-              >
-                Back to Home
-              </Button>
+                  <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    {aiReport.overallEvaluation}
+                  </p>
 
-              <Button
-                type="button"
-                disabled={
-                  downloadingId ===
+                </div>
+              )}
+
+              {/* =================================================
+                  STRENGTHS
+              ================================================= */}
+
+              {aiReport?.strengths && (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    Strengths
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    {aiReport.strengths}
+                  </p>
+
+                </div>
+              )}
+
+              {/* =================================================
+                  AREAS OF IMPROVEMENT
+              ================================================= */}
+
+              {aiReport?.areasOfImprovement && (
+                <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-900/40 dark:bg-rose-950/20">
+
+                  <p className="font-semibold text-rose-700 dark:text-rose-300">
+                    Areas Of Improvement
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    {aiReport.areasOfImprovement}
+                  </p>
+
+                </div>
+              )}
+
+              {/* =================================================
+                  RECOMMENDATIONS
+              ================================================= */}
+
+              {aiReport?.recommendations && (
+                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+
+                  <p className="font-semibold text-sky-700 dark:text-sky-300">
+                    Recommendations
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                    {aiReport.recommendations}
+                  </p>
+
+                </div>
+              )}
+
+              {/* =================================================
+                  QUESTION BY QUESTION
+              ================================================= */}
+
+              <div>
+
+                <div className="mb-4">
+
+                  <p className="text-sm font-semibold text-sky-500">
+                    Detailed Feedback
+                  </p>
+
+                  <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                    Question-by-Question Feedback
+                  </h2>
+
+                </div>
+
+                {answeredConversations.length ===
+                0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
+
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No answered questions were
+                      found for this session.
+                    </p>
+
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+
+                    {answeredConversations.map(
+                      (item, index) => (
+                        <div
+                          key={
+                            item.id || index
+                          }
+                          className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                        >
+
+                          {/* QUESTION */}
+
+                          <p className="font-semibold text-sky-600 dark:text-sky-400">
+                            Q{index + 1}:{" "}
+                            {item.aiQuestion ||
+                              item.question ||
+                              "Question unavailable"}
+                          </p>
+
+                          {/* ANSWER */}
+
+                          <div className="mt-4">
+
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              Your Answer
+                            </p>
+
+                            <p className="rounded-xl bg-slate-100 p-3 text-sm leading-6 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                              {item.userAnswer ||
+                                item.answer ||
+                                "No answer"}
+                            </p>
+
+                          </div>
+
+                          {/* FEEDBACK */}
+
+                          {(item.aiFeedback ||
+                            item.feedback) && (
+                            <div className="mt-4">
+
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                AI Feedback
+                              </p>
+
+                              <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
+                                {item.aiFeedback ||
+                                  item.feedback}
+                              </p>
+
+                            </div>
+                          )}
+
+                        </div>
+                      )
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+              {/* =================================================
+                  ACTIONS
+              ================================================= */}
+
+              <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    navigate("/dashboard")
+                  }
+                >
+                  Back to Home
+                </Button>
+
+                <Button
+                  type="button"
+                  disabled={
+                    downloadingId ===
+                    selectedSession.id
+                  }
+                  onClick={() =>
+                    handleDownload(
+                      selectedSession
+                    )
+                  }
+                >
+                  {downloadingId ===
                   selectedSession.id
-                }
-                onClick={() =>
-                  handleDownload(
-                    selectedSession
-                  )
-                }
-              >
-                {downloadingId ===
-                selectedSession.id
-                  ? "Downloading..."
-                  : "Download PDF"}
-              </Button>
+                    ? "Downloading..."
+                    : "Download PDF"}
+                </Button>
 
-            </div>
+              </div>
 
-          </>
-        )}
+            </>
+          )}
+
+        </Card>
+
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ALL REPORTS PAGE
+  // /reports
+  // =========================================================
+
+  return (
+    <div className="space-y-5">
+
+      {/* ===================================================
+          HEADER
+      =================================================== */}
+
+      <Card>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Reports
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Review your completed practice
+              sessions.
+            </p>
+
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+
+            <span className="font-medium text-slate-600 dark:text-slate-300">
+              Filter by Mode:
+            </span>
+
+            <select
+              value={modeFilter}
+              onChange={(e) =>
+                setModeFilter(e.target.value)
+              }
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-900"
+            >
+              {MODE_FILTER_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
+            </select>
+
+          </label>
+
+        </div>
 
       </Card>
 
-    ) : (
-      /* =====================================================
-         NORMAL ALL REPORTS PAGE
-      ===================================================== */
+      {/* ===================================================
+          REPORT CARDS
+      =================================================== */}
 
-      <>
-        {/* KEEP YOUR EXISTING ALL REPORTS UI HERE */}
-      </>
-    )}
+      {reportSessions.length === 0 ? (
+        <Card>
 
-  </div>
-);
+          <div className="py-10 text-center">
+
+            <p className="font-semibold text-slate-700 dark:text-slate-200">
+              No completed reports found
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Complete a practice session to
+              generate a report.
+            </p>
+
+          </div>
+
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+
+          {reportSessions.map((session) => (
+            <Card
+              key={session.id}
+              className="transition-all duration-200 hover:-translate-y-0.5 hover:ring-1 hover:ring-sky-500/30"
+            >
+
+              {/* TOP */}
+
+              <div className="flex items-start justify-between gap-3">
+
+                <div className="min-w-0">
+
+                  <h3 className="break-words font-semibold text-slate-800 dark:text-slate-100">
+                    Topic:{" "}
+                    {session.topic ||
+                      "Untitled Practice"}
+                  </h3>
+
+                  {session.createdAt && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      {new Date(
+                        session.createdAt
+                      ).toLocaleDateString()}
+                    </p>
+                  )}
+
+                </div>
+
+                <StatusBadge
+                  status={session.status}
+                />
+
+              </div>
+
+              {/* DETAILS */}
+
+              <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+
+                <p>
+                  <span className="font-medium">
+                    Mode:
+                  </span>{" "}
+                  {formatMode(session.mode)}
+                </p>
+
+                <p>
+                  <span className="font-medium">
+                    Questions:
+                  </span>{" "}
+                  {questionCounts[
+                    session.id
+                  ] ?? "..."}
+                </p>
+
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="mt-5 flex gap-2">
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="text-xs"
+                  onClick={() =>
+                    handleViewReport(
+                      session
+                    )
+                  }
+                >
+                  View Report
+                </Button>
+
+                <Button
+                  type="button"
+                  className="text-xs"
+                  disabled={
+                    downloadingId ===
+                    session.id
+                  }
+                  onClick={() =>
+                    handleDownload(
+                      session
+                    )
+                  }
+                >
+                  {downloadingId ===
+                  session.id
+                    ? "Downloading..."
+                    : "Download PDF"}
+                </Button>
+
+              </div>
+
+            </Card>
+          ))}
+
+        </div>
+      )}
+
+    </div>
+  );
 };
 
 
