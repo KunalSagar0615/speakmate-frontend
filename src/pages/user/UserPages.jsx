@@ -37,6 +37,7 @@ import { reportService } from "../../services/reportService";
 import { sessionService } from "../../services/sessionService";
 import { userService } from "../../services/userService";
 import { isEmailVerified } from "../../utils/emailVerified";
+import PulseGridLoader from "../../components/common/PulseGridLoader";
 
 const MODE_OPTIONS = [
   {
@@ -227,7 +228,7 @@ export const UserDashboardPage = () => {
 
         {heatmapLoading ? (
           <div className="flex justify-center py-10">
-            <Loader />
+            <PulseGridLoader />
           </div>
         ) : (
           <ActivityHeatmap
@@ -759,7 +760,7 @@ export const SessionsPage = () => {
       <h2 className="mb-4 text-xl font-bold">Session History</h2>
       {loading ? (
         <div className="flex justify-center py-8">
-          <Loader />
+          <PulseGridLoader />
         </div>
       ) : (
         <div className="overflow-auto">
@@ -828,7 +829,7 @@ export const SessionDetailsPage = () => {
       <h2 className="text-xl font-bold">Session Details</h2>
       {loading ? (
         <div className="flex justify-center py-8">
-          <Loader />
+          <PulseGridLoader/>
         </div>
       ) : (
         data.map((d) => (
@@ -956,7 +957,7 @@ export const ReportsPage = () => {
   if (loading) {
     return (
       <div className="flex min-h-[30vh] items-center justify-center">
-        <Loader />
+        <PulseGridLoader/>
       </div>
     );
   }
@@ -1046,7 +1047,7 @@ export const ReportsPage = () => {
           <h3 className="text-lg font-semibold">Report Preview</h3>
           {detailLoading ? (
             <div className="flex justify-center py-6">
-              <Loader />
+              <PulseGridLoader />
             </div>
           ) : (
             <>
@@ -1352,7 +1353,7 @@ export const SettingsPage = () => {
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader />
+        <PulseGridLoader/>
       </div>
     );
   }

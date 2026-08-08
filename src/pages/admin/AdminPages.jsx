@@ -7,6 +7,14 @@ import { adminService } from "../../services/adminService";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Input, Loader, StatCard, } from "../../components/common/UI";
 import PulseGridLoader from "../../components/common/PulseGridLoader";
+import {
+  Activity,
+  CalendarDays,
+  MessageSquare,
+  TrendingUp,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -71,7 +79,7 @@ export const AdminDashboardPage = () => {
           totalConversations: data.totalConversations,
         });
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -160,7 +168,6 @@ export const AdminDashboardPage = () => {
       1
     );
 
-    // Don't allow future months
     if (
       nextMonth.getFullYear() > now.getFullYear() ||
       (nextMonth.getFullYear() === now.getFullYear() &&
@@ -196,7 +203,6 @@ export const AdminDashboardPage = () => {
       selectedDate.getDate() + 1
     );
 
-    // Don't allow future dates
     if (nextDay > now) {
       return;
     }
@@ -211,172 +217,514 @@ export const AdminDashboardPage = () => {
   const isToday =
     selectedDate.toDateString() === new Date().toDateString();
 
+  // =========================
+  // Initial Loading
+  // =========================
+
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="flex min-h-[55vh] items-center justify-center">
         <PulseGridLoader />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
 
-      {/* =========================
-          Overall Statistics
-      ========================= */}
+      {/* =====================================================
+          DASHBOARD HEADER
+      ===================================================== */}
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">
-          Overview
-        </h2>
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-950/40">
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers}
-          />
+        {/* Background decoration */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />
 
-          <StatCard
-            title="Total Sessions"
-            value={stats.totalSessions}
-          />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
-          <StatCard
-            title="Total Conversations"
-            value={stats.totalConversations}
-          />
-        </div>
-      </div>
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-sky-500">
+              <Activity size={16} />
+              Admin Analytics
+            </div>
 
-      {/* =========================
-          Monthly Overview
-      ========================= */}
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              Dashboard Overview
+            </h1>
 
-      <Card>
-        <div className="mb-5 flex items-center justify-between">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              Monitor SpeakMate users, practice sessions and
+              conversation activity from one place.
+            </p>
+          </div>
 
-          <button
-            type="button"
-            onClick={goToPreviousMonth}
-            className="rounded-lg px-3 py-2 text-lg transition hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            ←
-          </button>
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <CalendarDays size={17} />
 
-          <h2 className="text-lg font-semibold">
-            {selectedMonth.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </h2>
-
-          <button
-            type="button"
-            onClick={goToNextMonth}
-            disabled={isCurrentMonth}
-            className="rounded-lg px-3 py-2 text-lg transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-slate-800"
-          >
-            →
-          </button>
+            <span>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          </div>
 
         </div>
+      </section>
 
+      {/* =====================================================
+          OVERVIEW METRICS
+      ===================================================== */}
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">
+              Overall
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+              SpeakMate activity
+            </h2>
+          </div>
+
+          <TrendingUp
+            size={21}
+            className="text-sky-500"
+          />
+        </div>
+
+        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-800/80 dark:bg-slate-950/40">
+
+          <div className="grid divide-y divide-slate-200/80 dark:divide-slate-800/80 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+
+            {/* Users */}
+            <div className="group relative p-6 transition hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Total Users
+                  </p>
+
+                  <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {stats.totalUsers}
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+                    Registered users
+                  </p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-500">
+                  <Users size={21} />
+                </div>
+
+              </div>
+
+              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent sm:hidden" />
+
+            </div>
+
+            {/* Sessions */}
+            <div className="group relative p-6 transition hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Total Sessions
+                  </p>
+
+                  <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {stats.totalSessions}
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+                    Practice sessions
+                  </p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-500">
+                  <Activity size={21} />
+                </div>
+
+              </div>
+
+              <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent sm:hidden" />
+
+            </div>
+
+            {/* Conversations */}
+            <div className="group p-6 transition hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Total Conversations
+                  </p>
+
+                  <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    {stats.totalConversations}
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+                    AI conversations
+                  </p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-500">
+                  <MessageSquare size={21} />
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          MONTHLY ANALYTICS
+      ===================================================== */}
+
+      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-800/80 dark:bg-slate-950/40">
+
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-5 dark:border-slate-800/80">
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">
+              Monthly
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+              Monthly activity
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-1">
+
+            <button
+              type="button"
+              onClick={goToPreviousMonth}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-sky-500 dark:text-slate-400 dark:hover:bg-slate-800"
+              aria-label="Previous month"
+            >
+              ←
+            </button>
+
+            <div className="min-w-[130px] text-center text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {selectedMonth.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={goToNextMonth}
+              disabled={isCurrentMonth}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-sky-500 disabled:cursor-not-allowed disabled:opacity-25 dark:text-slate-400 dark:hover:bg-slate-800"
+              aria-label="Next month"
+            >
+              →
+            </button>
+
+          </div>
+        </div>
+
+        {/* Monthly content */}
         {monthlyLoading ? (
-          <div className="flex min-h-[180px] items-center justify-center">
+          <div className="flex min-h-[250px] items-center justify-center">
             <PulseGridLoader />
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="p-6">
 
-            <StatCard
-              title="Active Users"
-              value={monthlyData.activeUsers}
-            />
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_2fr]">
 
-            <StatCard
-              title="New Users"
-              value={monthlyData.newUsers}
-            />
+              {/* Main monthly metric */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent p-6 dark:from-sky-500/15">
 
-            <StatCard
-              title="Sessions"
-              value={monthlyData.totalSessions}
-            />
+                <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-sky-400/10 blur-2xl" />
 
-            <StatCard
-              title="Conversations"
-              value={monthlyData.totalConversations}
-            />
+                <div className="relative">
 
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    <Users size={17} className="text-sky-500" />
+                    Active Users
+                  </div>
+
+                  <div className="mt-5 flex items-end gap-3">
+                    <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      {monthlyData.activeUsers}
+                    </span>
+
+                    <span className="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                      this month
+                    </span>
+                  </div>
+
+                  <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-sky-500"
+                      style={{
+                        width: `${Math.min(
+                          monthlyData.activeUsers * 10,
+                          100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Secondary metrics */}
+              <div className="grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <UserPlus size={16} className="text-sky-500" />
+                    New Users
+                  </div>
+
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                    {monthlyData.newUsers}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <Activity size={16} className="text-sky-500" />
+                    Sessions
+                  </div>
+
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                    {monthlyData.totalSessions}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <MessageSquare size={16} className="text-sky-500" />
+                    Conversations
+                  </div>
+
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                    {monthlyData.totalConversations}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <TrendingUp size={16} className="text-sky-500" />
+                    Engagement
+                  </div>
+
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                    {monthlyData.activeUsers > 0
+                      ? Math.round(
+                          monthlyData.totalConversations /
+                            monthlyData.activeUsers
+                        )
+                      : 0}
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    conversations / user
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
           </div>
         )}
-      </Card>
+      </section>
 
-      {/* =========================
-          Daily Overview
-      ========================= */}
+      {/* =====================================================
+          DAILY ACTIVITY
+      ===================================================== */}
 
-      <Card>
-        <div className="mb-5 flex items-center justify-between">
+      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-800/80 dark:bg-slate-950/40">
 
-          <button
-            type="button"
-            onClick={goToPreviousDay}
-            className="rounded-lg px-3 py-2 text-lg transition hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            ←
-          </button>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-5 dark:border-slate-800/80">
 
-          <h2 className="text-lg font-semibold">
-            {selectedDate.toLocaleDateString("en-US", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-          </h2>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">
+              Daily
+            </p>
 
-          <button
-            type="button"
-            onClick={goToNextDay}
-            disabled={isToday}
-            className="rounded-lg px-3 py-2 text-lg transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-slate-800"
-          >
-            →
-          </button>
+            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+              Daily activity
+            </h2>
+          </div>
 
+          <div className="flex items-center gap-1">
+
+            <button
+              type="button"
+              onClick={goToPreviousDay}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-sky-500 dark:text-slate-400 dark:hover:bg-slate-800"
+              aria-label="Previous day"
+            >
+              ←
+            </button>
+
+            <div className="min-w-[120px] text-center text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {selectedDate.toLocaleDateString("en-US", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={goToNextDay}
+              disabled={isToday}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-sky-500 disabled:cursor-not-allowed disabled:opacity-25 dark:text-slate-400 dark:hover:bg-slate-800"
+              aria-label="Next day"
+            >
+              →
+            </button>
+
+          </div>
         </div>
 
+        {/* Daily content */}
         {dailyLoading ? (
-          <div className="flex min-h-[180px] items-center justify-center">
+          <div className="flex min-h-[280px] items-center justify-center">
             <PulseGridLoader />
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="p-6">
 
-            <StatCard
-              title="Active Users"
-              value={dailyData.activeUsers}
-            />
+            <div className="relative ml-2">
 
-            <StatCard
-              title="New Users"
-              value={dailyData.newUsers}
-            />
+              {/* Timeline line */}
+              <div className="absolute bottom-6 left-[19px] top-6 w-px bg-gradient-to-b from-sky-500/50 via-slate-300 to-transparent dark:via-slate-700" />
 
-            <StatCard
-              title="Sessions"
-              value={dailyData.totalSessions}
-            />
+              <div className="space-y-7">
 
-            <StatCard
-              title="Conversations"
-              value={dailyData.totalConversations}
-            />
+                {/* Active users */}
+                <div className="relative flex items-center gap-5">
 
+                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-4 border-white bg-sky-500 text-white shadow-sm dark:border-slate-950">
+                    <Users size={17} />
+                  </div>
+
+                  <div className="flex flex-1 items-center justify-between gap-4">
+
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        Active Users
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Users active during this day
+                      </p>
+                    </div>
+
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {dailyData.activeUsers}
+                    </span>
+
+                  </div>
+                </div>
+
+                {/* New users */}
+                <div className="relative flex items-center gap-5">
+
+                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-4 border-white bg-sky-500 text-white shadow-sm dark:border-slate-950">
+                    <UserPlus size={17} />
+                  </div>
+
+                  <div className="flex flex-1 items-center justify-between gap-4">
+
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        New Users
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        New registrations
+                      </p>
+                    </div>
+
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {dailyData.newUsers}
+                    </span>
+
+                  </div>
+                </div>
+
+                {/* Sessions */}
+                <div className="relative flex items-center gap-5">
+
+                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-4 border-white bg-sky-500 text-white shadow-sm dark:border-slate-950">
+                    <Activity size={17} />
+                  </div>
+
+                  <div className="flex flex-1 items-center justify-between gap-4">
+
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        Practice Sessions
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Sessions started
+                      </p>
+                    </div>
+
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {dailyData.totalSessions}
+                    </span>
+
+                  </div>
+                </div>
+
+                {/* Conversations */}
+                <div className="relative flex items-center gap-5">
+
+                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-4 border-white bg-sky-500 text-white shadow-sm dark:border-slate-950">
+                    <MessageSquare size={17} />
+                  </div>
+
+                  <div className="flex flex-1 items-center justify-between gap-4">
+
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        AI Conversations
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Conversations generated
+                      </p>
+                    </div>
+
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {dailyData.totalConversations}
+                    </span>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
           </div>
         )}
-      </Card>
+      </section>
 
     </div>
   );
