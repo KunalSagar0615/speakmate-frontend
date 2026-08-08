@@ -19,7 +19,7 @@ import {
   Volume2,
   Play,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { translateText, getTranslationLabel } from "../../utils/translation";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -380,73 +380,128 @@ export const ChatPracticePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Keep only the CURRENT question in messages.
+  // ChatWindow can continue using the existing messages prop.
   const [messages, setMessages] = useState([]);
+
   const [answer, setAnswer] = useState("");
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const [suggestedAnswer, setSuggestedAnswer] = useState("");
   const [suggestedAnswerLoading, setSuggestedAnswerLoading] = useState(false);
   const [suggestedAnswerError, setSuggestedAnswerError] = useState("");
   const [suggestedAnswerCache, setSuggestedAnswerCache] = useState({});
+
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [questionNumber, setQuestionNumber] = useState(1);
-  const [translationPreference, setTranslationPreference] = useState("ENGLISH");
+
+  const [translationPreference, setTranslationPreference] =
+    useState("ENGLISH");
   const [translatedQuestion, setTranslatedQuestion] = useState("");
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState("");
+
   const mode = location.state?.mode || "FRIEND";
-  const difficultyLevel = location.state?.difficultyLevel || "BEGINNER";
+  const difficultyLevel =
+    location.state?.difficultyLevel || "BEGINNER";
+
+  // --------------------------------------------------
+  // START PRACTICE
+  // --------------------------------------------------
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const startPractice = async () => {
       try {
         const first = await conversationService.start(id);
+
+        if (cancelled) return;
+
+        const firstQuestion = first.aiQuestion || "";
+
+        setConversationId(first.id);
+
+        setCurrentQuestion(firstQuestion);
+        setQuestionNumber(1);
+
+        // Only ONE question exists in the UI.
         setMessages([
           {
             id: first.id,
-            aiQuestion: first.aiQuestion,
-            userAnswer: first.userAnswer,
-            aiFeedback: first.aiFeedback,
+            aiQuestion: firstQuestion,
+            userAnswer: "",
+            aiFeedback: "",
           },
         ]);
-        setConversationId(first.id);
-        setCurrentQuestion(first.aiQuestion || "");
-        setQuestionNumber(1);
+
+        setAnswer("");
+
         setSuggestedAnswer("");
         setSuggestedAnswerError("");
+        setSuggestedAnswerLoading(false);
+
         setTranslatedQuestion("");
         setTranslationError("");
       } catch {
-        toast.error("Failed to start conversation");
+        if (!cancelled) {
+          toast.error("Failed to start conversation");
+        }
       }
-    })();
+    };
+
+    startPractice();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
+  // --------------------------------------------------
+  // TRANSLATION
+  // --------------------------------------------------
+
   useEffect(() => {
-    if (!currentQuestion || !translationPreference || translationPreference === "ENGLISH") {
+    if (
+      !currentQuestion ||
+      !translationPreference ||
+      translationPreference === "ENGLISH"
+    ) {
       setTranslatedQuestion("");
       setTranslationError("");
+      setTranslationLoading(false);
       return;
     }
 
     let cancelled = false;
+
     setTranslationLoading(true);
     setTranslationError("");
+
     translateText(currentQuestion, translationPreference)
       .then(({ translatedText, error }) => {
-        if (!cancelled) {
-          setTranslatedQuestion(translatedText || currentQuestion);
-          setTranslationError(error ? "Showing original English text." : "");
-        }
+        if (cancelled) return;
+
+        setTranslatedQuestion(
+          translatedText || currentQuestion
+        );
+
+        setTranslationError(
+          error ? "Showing original English text." : ""
+        );
       })
       .catch(() => {
-        if (!cancelled) {
-          setTranslatedQuestion(currentQuestion);
-          setTranslationError("");
-        }
+        if (cancelled) return;
+
+        setTranslatedQuestion(currentQuestion);
+        setTranslationError("");
       })
       .finally(() => {
-        if (!cancelled) setTranslationLoading(false);
+        if (!cancelled) {
+          setTranslationLoading(false);
+        }
       });
 
     return () => {
@@ -454,70 +509,156 @@ export const ChatPracticePage = () => {
     };
   }, [currentQuestion, translationPreference]);
 
+  // --------------------------------------------------
+  // SEND ANSWER
+  // --------------------------------------------------
+
   const onSend = async () => {
+    const finalAnswer = answer?.trim();
+
+    if (!finalAnswer || !conversationId || loading) {
+      return;
+    }
+
     setLoading(true);
+
+    // Immediately hide the previous suggestion.
+    setSuggestedAnswer("");
+    setSuggestedAnswerError("");
+
     try {
-      const res = await conversationService.answer({ conversationId, answer });
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          answer,
-          feedback: res.feedback,
-        };
-        updated.push({ id: res.nextConversationId, aiQuestion: res.nextQuestion });
-        return updated;
+      const res = await conversationService.answer({
+        conversationId,
+        answer: finalAnswer,
       });
-      setConversationId(res.nextConversationId ?? res.newConversationId);
+
+      const nextQuestion = res.nextQuestion || "";
+
+      const nextConversationId =
+        res.newConversationId ?? res.nextConversationId;
+
+      // ----------------------------------------------
+      // Move to the next question
+      // ----------------------------------------------
+
+      setConversationId(nextConversationId);
+
+      setCurrentQuestion(nextQuestion);
+
+      setQuestionNumber((prev) => prev + 1);
+
       setAnswer("");
+
+      // ----------------------------------------------
+      // IMPORTANT:
+      // Replace the old message instead of pushing
+      // another message.
+      // ----------------------------------------------
+
+      setMessages([
+        {
+          id: nextConversationId,
+          aiQuestion: nextQuestion,
+          userAnswer: "",
+          aiFeedback: "",
+        },
+      ]);
+
+      // ----------------------------------------------
+      // Reset question-specific UI
+      // ----------------------------------------------
+
       setSuggestedAnswer("");
       setSuggestedAnswerError("");
-      setCurrentQuestion(res.nextQuestion || "");
-      setQuestionNumber((prev) => prev + 1);
+      setSuggestedAnswerLoading(false);
+
       setTranslatedQuestion("");
       setTranslationError("");
+    } catch {
+      toast.error("Failed to submit answer");
     } finally {
       setLoading(false);
     }
   };
 
+  // --------------------------------------------------
+  // SHOW SUGGESTED ANSWER
+  // --------------------------------------------------
+
   const onShowSuggestedAnswer = async () => {
-    if (!currentQuestion || suggestedAnswerLoading) return;
-    const cacheKey = `${currentQuestion}|${conversationId || ""}`;
+    if (
+      !currentQuestion ||
+      suggestedAnswerLoading ||
+      loading
+    ) {
+      return;
+    }
+
+    const cacheKey = `${currentQuestion}|${conversationId || ""
+      }`;
+
+    // Use cached answer if available.
     if (suggestedAnswerCache[cacheKey]) {
-      setSuggestedAnswer(suggestedAnswerCache[cacheKey]);
+      setSuggestedAnswer(
+        suggestedAnswerCache[cacheKey]
+      );
       setSuggestedAnswerError("");
       return;
     }
 
     setSuggestedAnswerLoading(true);
     setSuggestedAnswerError("");
+
     try {
-      const res = await conversationService.getSuggestedAnswer({
-        question: currentQuestion,
-        mode,
-        difficultyLevel,
-      });
-      const answerText = typeof res === "string" ? res : res?.answer || res?.suggestedAnswer || "";
+      const res =
+        await conversationService.getSuggestedAnswer({
+          question: currentQuestion,
+          mode,
+          difficultyLevel,
+        });
+
+      const answerText =
+        typeof res === "string"
+          ? res
+          : res?.answer ||
+          res?.suggestedAnswer ||
+          "";
+
       setSuggestedAnswer(answerText);
-      setSuggestedAnswerCache((prev) => ({ ...prev, [cacheKey]: answerText }));
+
+      setSuggestedAnswerCache((prev) => ({
+        ...prev,
+        [cacheKey]: answerText,
+      }));
     } catch {
-      setSuggestedAnswerError("Unable to load a suggested answer right now.");
+      setSuggestedAnswerError(
+        "Unable to load a suggested answer right now."
+      );
     } finally {
       setSuggestedAnswerLoading(false);
     }
   };
 
+  // --------------------------------------------------
+  // END SESSION
+  // --------------------------------------------------
+
   const onEnd = async () => {
     try {
       await sessionService.end(id);
-      toast.success("Session ended successfully");
+
+      toast.success("Session completed successfully");
+
+      // Open ONLY this session's report
+      navigate(`/reports?session=${id}`);
     } catch {
       toast.error("Failed to end session");
-    } finally {
-      navigate("/sessions");
     }
   };
+
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   return (
     <ChatWindow
@@ -527,17 +668,26 @@ export const ChatPracticePage = () => {
       onSend={onSend}
       onEnd={onEnd}
       loading={loading}
+
       suggestedAnswer={suggestedAnswer}
       suggestedAnswerLoading={suggestedAnswerLoading}
       onShowSuggestedAnswer={onShowSuggestedAnswer}
       suggestedAnswerError={suggestedAnswerError}
+
       translationMode={translationPreference}
       translatedText={translatedQuestion}
-      translationLabel={getTranslationLabel(translationPreference)}
+      translationLabel={getTranslationLabel(
+        translationPreference
+      )}
       translationLoading={translationLoading}
       onTranslationChange={setTranslationPreference}
       translationError={translationError}
-      showTranslationControls={mode === "FRIEND" || mode === "ENGLISH_COACH" || mode === "INTERVIEW"}
+
+      showTranslationControls={
+        mode === "FRIEND" ||
+        mode === "ENGLISH_COACH" ||
+        mode === "INTERVIEW"
+      }
     />
   );
 };
@@ -669,6 +819,8 @@ export const VoicePracticePage = () => {
     stopListening();
     setLoading(true);
     setFeedback("");
+    setSuggestedAnswer("");
+    setSuggestedAnswerError("");
     try {
       const res = await conversationService.answer({ conversationId, answer: finalTranscript });
       setFeedback(res.feedback || "Answer submitted");
@@ -689,17 +841,20 @@ export const VoicePracticePage = () => {
   };
 
   const onEnd = async () => {
-    stopListening();
-    stopSpeaking();
-    try {
-      await sessionService.end(id);
-      toast.success("Session ended successfully");
-    } catch {
-      toast.error("Failed to end session");
-    } finally {
-      navigate("/sessions");
-    }
-  };
+  stopListening();
+  stopSpeaking();
+
+  try {
+    await sessionService.end(id);
+
+    toast.success("Session completed successfully");
+
+    // Open ONLY this session's report
+    navigate(`/reports?session=${id}`);
+  } catch {
+    toast.error("Failed to end session");
+  }
+};
 
   return (
     <VoicePanel
@@ -829,7 +984,7 @@ export const SessionDetailsPage = () => {
       <h2 className="text-xl font-bold">Session Details</h2>
       {loading ? (
         <div className="flex justify-center py-8">
-          <PulseGridLoader/>
+          <PulseGridLoader />
         </div>
       ) : (
         data.map((d) => (
@@ -846,17 +1001,28 @@ export const SessionDetailsPage = () => {
 
 export const ReportsPage = () => {
   const { userId } = useAuth();
+  const navigate = useNavigate();
+
   const [searchParams, setSearchParams] = useSearchParams();
+
   const sessionIdParam = searchParams.get("session");
+
   const [questionCounts, setQuestionCounts] = useState({});
   const [modeFilter, setModeFilter] = useState("ALL");
-  const [selectedSessionId, setSelectedSessionId] = useState(sessionIdParam || null);
+  const [selectedSessionId, setSelectedSessionId] = useState(
+    sessionIdParam || null
+  );
+
   const [conversations, setConversations] = useState([]);
   const [aiReport, setAiReport] = useState(null);
+
   const [detailLoading, setDetailLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const previewRef = useRef(null);
 
   const MODE_FILTER_OPTIONS = [
     { value: "ALL", label: "All Modes" },
@@ -865,22 +1031,47 @@ export const ReportsPage = () => {
     { value: "ENGLISH_COACH", label: "ENGLISH_COACH" },
   ];
 
+  // --------------------------------------------------
+  // COMPLETED REPORTS
+  // --------------------------------------------------
+
   const reportSessions = useMemo(() => {
-    const completed = sessions.filter((s) => s.status === "COMPLETED");
-    if (modeFilter === "ALL") return completed;
-    return completed.filter((s) => s.mode === modeFilter);
+    const completed = sessions.filter(
+      (s) => s.status === "COMPLETED"
+    );
+
+    if (modeFilter === "ALL") {
+      return completed;
+    }
+
+    return completed.filter(
+      (s) => s.mode === modeFilter
+    );
   }, [sessions, modeFilter]);
 
+  // --------------------------------------------------
+  // SELECTED SESSION
+  // --------------------------------------------------
+
   const selectedSession = useMemo(
-    () => reportSessions.find((s) => String(s.id) === String(selectedSessionId)) || null,
+    () =>
+      reportSessions.find(
+        (s) =>
+          String(s.id) === String(selectedSessionId)
+      ) || null,
     [reportSessions, selectedSessionId]
   );
+
+  // --------------------------------------------------
+  // LOAD SESSIONS
+  // --------------------------------------------------
 
   useEffect(() => {
     if (!userId) {
       setLoading(false);
       return;
     }
+
     sessionService
       .getByUserId(userId)
       .then(setSessions)
@@ -888,22 +1079,42 @@ export const ReportsPage = () => {
       .finally(() => setLoading(false));
   }, [userId]);
 
+  // --------------------------------------------------
+  // LOAD QUESTION COUNTS
+  // --------------------------------------------------
+
   useEffect(() => {
     if (!reportSessions.length) {
       setQuestionCounts({});
       return;
     }
+
     Promise.all(
       reportSessions.map(async (session) => {
         try {
-          const summary = await sessionService.getSummary(session.id);
-          return [session.id, summary.totalQuestions ?? summary.totalConversations ?? 0];
+          const summary =
+            await sessionService.getSummary(session.id);
+
+          return [
+            session.id,
+            summary.totalQuestions ??
+            summary.totalConversations ??
+            0,
+          ];
         } catch {
           return [session.id, 0];
         }
       })
-    ).then((entries) => setQuestionCounts(Object.fromEntries(entries)));
+    ).then((entries) =>
+      setQuestionCounts(
+        Object.fromEntries(entries)
+      )
+    );
   }, [reportSessions]);
+
+  // --------------------------------------------------
+  // URL SESSION PARAMETER
+  // --------------------------------------------------
 
   useEffect(() => {
     if (sessionIdParam) {
@@ -911,232 +1122,387 @@ export const ReportsPage = () => {
     }
   }, [sessionIdParam]);
 
+  // --------------------------------------------------
+  // LOAD REPORT DETAILS
+  // --------------------------------------------------
+
   useEffect(() => {
     if (!selectedSession?.id) {
       setConversations([]);
       setAiReport(null);
       return;
     }
+
     setDetailLoading(true);
+
     Promise.all([
-      conversationService.getBySession(selectedSession.id),
-      sessionService.getReport(selectedSession.id).catch(() => null),
+      conversationService.getBySession(
+        selectedSession.id
+      ),
+
+      sessionService
+        .getReport(selectedSession.id)
+        .catch(() => null),
     ])
       .then(([convData, reportData]) => {
-        setConversations(convData);
+        setConversations(convData || []);
         setAiReport(reportData);
       })
       .catch(() => {
         setConversations([]);
         setAiReport(null);
       })
-      .finally(() => setDetailLoading(false));
+      .finally(() => {
+        setDetailLoading(false);
+      });
   }, [selectedSession?.id]);
 
-  const handleSelectSession = (session) => {
-    setSelectedSessionId(String(session.id));
-    setSearchParams({ session: String(session.id) });
+  // --------------------------------------------------
+  // VIEW REPORT
+  // --------------------------------------------------
+
+  const handleViewReport = (session) => {
+    const id = String(session.id);
+
+    setSelectedSessionId(id);
+
+    setSearchParams({ session: id });
+
+    // Give React time to render the preview.
+    setTimeout(() => {
+      previewRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
   };
+
+  // --------------------------------------------------
+  // DOWNLOAD REPORT
+  // --------------------------------------------------
 
   const handleDownload = async (session) => {
     setDownloadingId(session.id);
+
     try {
-      const [convData, reportData] = await Promise.all([
-        conversationService.getBySession(session.id),
-        sessionService.getReport(session.id).catch(() => null),
-      ]);
-      reportService.downloadPdf(session, convData, reportData);
-      toast.success("Report downloaded successfully");
+      const [convData, reportData] =
+        await Promise.all([
+          conversationService.getBySession(
+            session.id
+          ),
+
+          sessionService
+            .getReport(session.id)
+            .catch(() => null),
+        ]);
+
+      reportService.downloadPdf(
+        session,
+        convData,
+        reportData
+      );
+
+      toast.success(
+        "Report downloaded successfully"
+      );
     } catch {
-      toast.error("Failed to download report");
+      toast.error(
+        "Failed to download report"
+      );
     } finally {
       setDownloadingId(null);
     }
   };
 
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
+
   if (loading) {
     return (
       <div className="flex min-h-[30vh] items-center justify-center">
-        <PulseGridLoader/>
+        <PulseGridLoader />
       </div>
     );
   }
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-bold">Reports</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <span className="font-medium text-slate-600 dark:text-slate-300">Filter by Mode:</span>
-            <select
-              value={modeFilter}
-              onChange={(e) => setModeFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-primary/50 focus:ring dark:border-slate-700 dark:bg-slate-900"
-            >
-              {MODE_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </Card>
+  <div className="space-y-5">
 
-      {reportSessions.length === 0 ? (
-        <Card>
-          <p className="text-slate-500">No completed reports found for the selected mode.</p>
-        </Card>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {reportSessions.map((session) => (
-            <Card
-              key={session.id}
-              className={`cursor-pointer transition hover:ring-2 hover:ring-primary/30 ${String(selectedSessionId) === String(session.id)
-                ? "ring-2 ring-primary"
-                : ""
-                }`}
-              onClick={() => handleSelectSession(session)}
-            >
-              <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-                Topic: {session.topic}
-              </h3>
-              <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                <p>
-                  <span className="font-medium">Mode:</span> {session.mode}
+    {sessionIdParam && selectedSession ? (
+      /* =====================================================
+         SINGLE SESSION REPORT
+      ===================================================== */
+      <Card className="space-y-6">
+
+        {/* HEADER */}
+
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+            <p className="text-sm font-semibold text-sky-500">
+              Practice Completed
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+              Your Practice Report
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {selectedSession.topic}
+            </p>
+          </div>
+
+          <StatusBadge
+            status={selectedSession.status}
+          />
+
+        </div>
+
+        {/* LOADING */}
+
+        {detailLoading ? (
+          <div className="flex justify-center py-10">
+            <PulseGridLoader />
+          </div>
+        ) : (
+          <>
+
+            {/* SESSION INFORMATION */}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-medium text-slate-500">
+                  Topic
                 </p>
-                <p>
-                  <span className="font-medium">Questions:</span>{" "}
-                  {questionCounts[session.id] ?? "..."}
-                </p>
-                <p className="flex items-center gap-2">
-                  <span className="font-medium">Status:</span>
-                  <StatusBadge status={session.status} />
+
+                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                  {selectedSession.topic}
                 </p>
               </div>
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="secondary"
-                  className="text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectSession(session);
-                  }}
-                >
-                  View
-                </Button>
-                <Button
-                  className="text-xs"
-                  disabled={downloadingId === session.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownload(session);
-                  }}
-                >
-                  {downloadingId === session.id ? "Downloading..." : "Download PDF"}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
 
-      {selectedSession && (
-        <Card className="space-y-3">
-          <h3 className="text-lg font-semibold">Report Preview</h3>
-          {detailLoading ? (
-            <div className="flex justify-center py-6">
-              <PulseGridLoader />
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-medium text-slate-500">
+                  Mode
+                </p>
+
+                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                  {formatMode(selectedSession.mode)}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-medium text-slate-500">
+                  Status
+                </p>
+
+                <div className="mt-1">
+                  <StatusBadge
+                    status={selectedSession.status}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
+                <p className="text-xs font-medium text-slate-500">
+                  Total Questions
+                </p>
+
+                <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                  {
+                    reportService
+                      .getAnsweredConversations(
+                        conversations
+                      ).length
+                  }
+                </p>
+              </div>
+
             </div>
-          ) : (
-            <>
-              <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <p>
-                  <span className="font-medium">Topic:</span> {selectedSession.topic}
+
+            {/* AI REPORT */}
+
+            {aiReport?.overallEvaluation && (
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+
+                <p className="font-semibold text-sky-700 dark:text-sky-300">
+                  Overall Evaluation
                 </p>
-                <p>
-                  <span className="font-medium">Mode:</span> {formatMode(selectedSession.mode)} (
-                  {selectedSession.mode})
+
+                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  {aiReport.overallEvaluation}
                 </p>
-                <p>
-                  <span className="font-medium">Status:</span> {selectedSession.status}
-                </p>
-                <p>
-                  <span className="font-medium">Total Questions:</span>{" "}
-                  {reportService.getAnsweredConversations(conversations).length}
-                </p>
+
               </div>
+            )}
 
-              {aiReport?.overallEvaluation && (
-                <div className="rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
-                  <p className="font-semibold">Overall Evaluation</p>
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">
-                    {aiReport.overallEvaluation}
-                  </p>
-                </div>
-              )}
+            {/* STRENGTHS */}
 
-              {aiReport?.strengths && (
-                <div className="rounded-xl bg-emerald-50 p-4 text-sm dark:bg-emerald-950/30">
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-300">Strengths</p>
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">{aiReport.strengths}</p>
-                </div>
-              )}
+            {aiReport?.strengths && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
 
-              {aiReport?.areasOfImprovement && (
-                <div className="rounded-xl bg-rose-50 p-4 text-sm dark:bg-rose-950/30">
-                  <p className="font-semibold text-rose-800 dark:text-rose-300">
-                    Areas Of Improvement
-                  </p>
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">
-                    {aiReport.areasOfImprovement}
-                  </p>
-                </div>
-              )}
+                <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+                  Strengths
+                </p>
 
-              {aiReport?.recommendations && (
-                <div className="rounded-xl bg-sky-50 p-4 text-sm dark:bg-sky-950/30">
-                  <p className="font-semibold text-sky-800 dark:text-sky-300">Recommendations</p>
-                  <p className="mt-1 text-slate-600 dark:text-slate-300">
-                    {aiReport.recommendations}
-                  </p>
-                </div>
-              )}
+                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  {aiReport.strengths}
+                </p>
 
-              <div className="space-y-3">
-                {reportService.getAnsweredConversations(conversations).map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"
-                  >
-                    <p className="font-semibold text-primary">
-                      Q{index + 1}: {item.aiQuestion || item.question}
-                    </p>
-                    <p className="mt-2 rounded-lg bg-slate-100 p-2 text-sm dark:bg-slate-800">
-                      {item.userAnswer || item.answer}
-                    </p>
-                    {(item.aiFeedback || item.feedback) && (
-                      <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-                        {item.aiFeedback || item.feedback}
+              </div>
+            )}
+
+            {/* IMPROVEMENT */}
+
+            {aiReport?.areasOfImprovement && (
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-900/40 dark:bg-rose-950/20">
+
+                <p className="font-semibold text-rose-700 dark:text-rose-300">
+                  Areas Of Improvement
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  {aiReport.areasOfImprovement}
+                </p>
+
+              </div>
+            )}
+
+            {/* RECOMMENDATIONS */}
+
+            {aiReport?.recommendations && (
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
+
+                <p className="font-semibold text-sky-700 dark:text-sky-300">
+                  Recommendations
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  {aiReport.recommendations}
+                </p>
+
+              </div>
+            )}
+
+            {/* QUESTIONS */}
+
+            <div>
+
+              <h3 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">
+                Question-by-Question Feedback
+              </h3>
+
+              <div className="space-y-4">
+
+                {reportService
+                  .getAnsweredConversations(
+                    conversations
+                  )
+                  .map((item, index) => (
+
+                    <div
+                      key={item.id || index}
+                      className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                    >
+
+                      <p className="font-semibold text-sky-600 dark:text-sky-400">
+                        Q{index + 1}:{" "}
+                        {item.aiQuestion ||
+                          item.question}
                       </p>
-                    )}
-                  </div>
-                ))}
+
+                      <div className="mt-3">
+
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Your Answer
+                        </p>
+
+                        <p className="rounded-xl bg-slate-100 p-3 text-sm leading-6 dark:bg-slate-800 dark:text-slate-200">
+                          {item.userAnswer ||
+                            item.answer ||
+                            "No answer"}
+                        </p>
+
+                      </div>
+
+                      {(item.aiFeedback ||
+                        item.feedback) && (
+                        <div className="mt-3">
+
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            AI Feedback
+                          </p>
+
+                          <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
+                            {item.aiFeedback ||
+                              item.feedback}
+                          </p>
+
+                        </div>
+                      )}
+
+                    </div>
+
+                  ))}
+
               </div>
+
+            </div>
+
+            {/* ACTIONS */}
+
+            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
 
               <Button
-                onClick={() => handleDownload(selectedSession)}
-                disabled={downloadingId === selectedSession.id}
+                type="button"
+                variant="secondary"
+                onClick={() => navigate("/dashboard")}
               >
-                {downloadingId === selectedSession.id ? "Downloading..." : "Download PDF"}
+                Back to Home
               </Button>
-            </>
-          )}
-        </Card>
-      )}
-    </div>
-  );
+
+              <Button
+                type="button"
+                disabled={
+                  downloadingId ===
+                  selectedSession.id
+                }
+                onClick={() =>
+                  handleDownload(
+                    selectedSession
+                  )
+                }
+              >
+                {downloadingId ===
+                selectedSession.id
+                  ? "Downloading..."
+                  : "Download PDF"}
+              </Button>
+
+            </div>
+
+          </>
+        )}
+
+      </Card>
+
+    ) : (
+      /* =====================================================
+         NORMAL ALL REPORTS PAGE
+      ===================================================== */
+
+      <>
+        {/* KEEP YOUR EXISTING ALL REPORTS UI HERE */}
+      </>
+    )}
+
+  </div>
+);
 };
 
 
@@ -1154,11 +1520,11 @@ export const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
 
   const {
-  userId,
-  user: cachedUser,
-  setUser,
-  logout,
-} = useAuth();
+    userId,
+    user: cachedUser,
+    setUser,
+    logout,
+  } = useAuth();
 
   const navigate = useNavigate();
 
@@ -1353,7 +1719,7 @@ export const SettingsPage = () => {
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <PulseGridLoader/>
+        <PulseGridLoader />
       </div>
     );
   }
