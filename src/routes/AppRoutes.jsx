@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AdminLayout, AuthLayout, UserLayout } from "../layouts/Layouts";
-
+import { AdminSettingsPage } from "../pages/admin/AdminSettingsPage";
 import LandingPage from "../pages/LandingPage";
 import HowToUse from "../components/landing/HowToUse";
 import { ContactPage } from "../pages/legal/ContactPage";
@@ -16,6 +16,7 @@ import {
   AdminDashboardPage,
   AdminSessionsPage,
   AdminUsersPage,
+  AdminUserDetailsPage,
 } from "../pages/admin/AdminPages";
 
 import {
@@ -201,6 +202,11 @@ export default function AppRoutes() {
           />
 
           <Route
+            path="/admin/users/:userId"
+            element={<AdminUserDetailsPage />}
+          />
+
+          <Route
             path="/admin/sessions"
             element={<AdminSessionsPage />}
           />
@@ -210,6 +216,10 @@ export default function AppRoutes() {
             element={<AdminConversationsPage />}
           />
 
+          <Route
+            path="/admin/settings"
+            element={<AdminSettingsPage />}
+          />
         </Route>
       </Route>
 
