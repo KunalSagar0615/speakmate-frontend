@@ -1,24 +1,5 @@
-import {
-  BarChart3,
-  Calendar,
-  CheckCircle2,
-  Flame,
-  LogOut,
-  Mail,
-  Moon,
-  Phone,
-  ShieldCheck,
-  Sun,
-  Target,
-  Trophy,
-  User,
-  BriefcaseBusiness,
-  GraduationCap,
-  Globe2,
-  MessageSquare,
-  Volume2,
-  Play,
-} from "lucide-react";
+import {BarChart3, Calendar, CheckCircle2, Flame, LogOut, Mail, Moon, Phone, ShieldCheck, Sun, Target, Trophy, User, BriefcaseBusiness,
+  GraduationCap, Globe2, MessageSquare, Volume2, Play, } from "lucide-react";
 import { useEffect, useRef, useMemo, useState } from "react";
 import { translateText, getTranslationLabel } from "../../utils/translation";
 import toast from "react-hot-toast";
@@ -37,6 +18,8 @@ import { reportService } from "../../services/reportService";
 import { sessionService } from "../../services/sessionService";
 import { userService } from "../../services/userService";
 import { isEmailVerified } from "../../utils/emailVerified";
+import { useReports } from "../../context/ReportsContext.jsx";
+import { useSettings } from "../../context/SettingsContext";
 import PulseGridLoader from "../../components/common/PulseGridLoader";
 
 const MODE_OPTIONS = [
@@ -135,24 +118,43 @@ export const UserDashboardPage = () => {
   const { userId, user } = useAuth();
   const navigate = useNavigate();
 
+  const { loadReports } = useReports();
+
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState("");
   const [heatmapLoading, setHeatmapLoading] = useState(true);
-  const ANALYTICS_CACHE_KEY = `speakmate_dashboard_analytics_${userId}`;
+
+  const ANALYTICS_CACHE_KEY =
+    `speakmate_dashboard_analytics_${userId}`;
 
   useEffect(() => {
     if (!userId) {
       return;
     }
 
-    const cachedAnalytics = localStorage.getItem(ANALYTICS_CACHE_KEY);
+    // --------------------------------------------------
+    // PRELOAD REPORTS IN BACKGROUND
+    // --------------------------------------------------
+
+    loadReports();
+
+    // --------------------------------------------------
+    // LOAD DASHBOARD ANALYTICS
+    // --------------------------------------------------
+
+    const cachedAnalytics =
+      localStorage.getItem(ANALYTICS_CACHE_KEY);
+
     if (cachedAnalytics) {
       try {
         const parsed = JSON.parse(cachedAnalytics);
+
         setAnalytics(parsed);
         setHeatmapLoading(false);
       } catch {
-        localStorage.removeItem(ANALYTICS_CACHE_KEY);
+        localStorage.removeItem(
+          ANALYTICS_CACHE_KEY
+        );
       }
     }
 
@@ -160,21 +162,25 @@ export const UserDashboardPage = () => {
       setError("");
 
       try {
-        const data = await dashboardService.getAnalytics();
+        const data =
+          await dashboardService.getAnalytics();
+
         setAnalytics(data);
+
         localStorage.setItem(
           ANALYTICS_CACHE_KEY,
           JSON.stringify(data)
         );
       } catch {
-        setError("Unable to load dashboard data.");
+        setError(
+          "Unable to load dashboard data."
+        );
       } finally {
         setHeatmapLoading(false);
       }
     })();
 
-  }, [userId]);
-
+  }, [userId, loadReports]);
 
   if (error) {
     return (
@@ -186,37 +192,65 @@ export const UserDashboardPage = () => {
 
   return (
     <div className="space-y-8">
+
       <DashboardHero
         stats={{
-          currentStreak: analytics?.currentStreak ?? "...",
-          totalSessions: analytics?.totalSessions ?? "...",
-          practiceDays: analytics?.totalPracticeDays ?? "...",
-          reportsGenerated: analytics?.reportsGenerated ?? "...",
+          currentStreak:
+            analytics?.currentStreak ?? "...",
+
+          totalSessions:
+            analytics?.totalSessions ?? "...",
+
+          practiceDays:
+            analytics?.totalPracticeDays ?? "...",
+
+          reportsGenerated:
+            analytics?.reportsGenerated ?? "...",
         }}
-        userName={user?.name || user?.username || "User"}
+
+        userName={
+          user?.name ||
+          user?.username ||
+          "User"
+        }
+
         onFriendPractice={() =>
           navigate("/practice", {
-            state: { defaultMode: "FRIEND" },
+            state: {
+              defaultMode: "FRIEND",
+            },
           })
         }
 
         onTeacherPractice={() =>
           navigate("/practice", {
-            state: { defaultMode: "ENGLISH_COACH" },
+            state: {
+              defaultMode: "ENGLISH_COACH",
+            },
           })
         }
 
         onInterviewerPractice={() =>
           navigate("/practice", {
-            state: { defaultMode: "INTERVIEW" },
+            state: {
+              defaultMode: "INTERVIEW",
+            },
           })
         }
-        onCustomPractice={() => navigate("/custom-practice")}
-        onReports={() => navigate("/reports")}
+
+        onCustomPractice={() =>
+          navigate("/custom-practice")
+        }
+
+        onReports={() =>
+          navigate("/reports")
+        }
       />
 
       <section>
+
         <div className="mb-4">
+
           <p className="text-sm font-semibold text-sky-500">
             Your Consistency
           </p>
@@ -224,6 +258,7 @@ export const UserDashboardPage = () => {
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Every practice day moves you one step forward.
           </p>
+
         </div>
 
         {heatmapLoading ? (
@@ -232,10 +267,14 @@ export const UserDashboardPage = () => {
           </div>
         ) : (
           <ActivityHeatmap
-            activityHeatmap={analytics?.activityHeatmap || {}}
+            activityHeatmap={
+              analytics?.activityHeatmap || {}
+            }
           />
         )}
+
       </section>
+
     </div>
   );
 };
@@ -380,6 +419,7 @@ export const ChatPracticePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshReports } = useReports();
 
   // Keep only the CURRENT question in messages.
   // ChatWindow can continue using the existing messages prop.
@@ -644,17 +684,19 @@ export const ChatPracticePage = () => {
   // --------------------------------------------------
 
   const onEnd = async () => {
-    try {
-      await sessionService.end(id);
+  try {
+    await sessionService.end(id);
 
-      toast.success("Session completed successfully");
+    // Update the reports cache before opening Reports.
+    await refreshReports();
 
-      // Open ONLY this session's report
-      navigate(`/reports?session=${id}`);
-    } catch {
-      toast.error("Failed to end session");
-    }
-  };
+    toast.success("Session completed successfully");
+
+    navigate(`/reports?session=${id}`);
+  } catch {
+    toast.error("Failed to end session");
+  }
+};
 
   // --------------------------------------------------
   // UI
@@ -697,6 +739,7 @@ export const VoicePracticePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshReports } = useReports();
   const [question, setQuestion] = useState("Loading first AI question...");
   const [questionNumber, setQuestionNumber] = useState(1);
   const [conversationId, setConversationId] = useState(null);
@@ -842,20 +885,22 @@ export const VoicePracticePage = () => {
   };
 
   const onEnd = async () => {
-    stopListening();
-    stopSpeaking();
+  stopListening();
+  stopSpeaking();
 
-    try {
-      await sessionService.end(id);
+  try {
+    await sessionService.end(id);
 
-      toast.success("Session completed successfully");
+    // Update the reports cache before opening Reports.
+    await refreshReports();
 
-      // Open ONLY this session's report
-      navigate(`/reports?session=${id}`);
-    } catch {
-      toast.error("Failed to end session");
-    }
-  };
+    toast.success("Session completed successfully");
+
+    navigate(`/reports?session=${id}`);
+  } catch {
+    toast.error("Failed to end session");
+  }
+};
 
   return (
     <VoicePanel
@@ -1001,14 +1046,18 @@ export const SessionDetailsPage = () => {
 };
 
 export const ReportsPage = () => {
-  const { userId } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const sessionIdParam = searchParams.get("session");
 
-  const [sessions, setSessions] = useState([]);
-  const [questionCounts, setQuestionCounts] = useState({});
+  const {
+    sessions,
+    questionCounts,
+    reportSessions,
+    loading,
+  } = useReports();
+
   const [modeFilter, setModeFilter] = useState("ALL");
 
   const [selectedSessionId, setSelectedSessionId] = useState(
@@ -1018,7 +1067,6 @@ export const ReportsPage = () => {
   const [conversations, setConversations] = useState([]);
   const [aiReport, setAiReport] = useState(null);
 
-  const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
 
@@ -1030,37 +1078,21 @@ export const ReportsPage = () => {
   ];
 
   // =========================================================
-  // COMPLETED REPORT SESSIONS
+  // MODE FILTER
   // =========================================================
 
-  const reportSessions = useMemo(() => {
-    const completed = sessions.filter(
-      (session) => session.status === "COMPLETED"
-    );
-
+  const filteredReportSessions = useMemo(() => {
     if (modeFilter === "ALL") {
-      return completed;
+      return reportSessions;
     }
 
-    return completed.filter(
+    return reportSessions.filter(
       (session) => session.mode === modeFilter
     );
-  }, [sessions, modeFilter]);
-
-  const visibleReportSessions = useMemo(() => {
-  return reportSessions.filter((session) => {
-    const count = questionCounts[session.id];
-
-    return typeof count === "number" && count > 0;
-  });
-}, [reportSessions, questionCounts]);
+  }, [reportSessions, modeFilter]);
 
   // =========================================================
   // SELECTED SESSION
-  //
-  // IMPORTANT:
-  // Find directly from sessions instead of reportSessions.
-  // This makes /reports?session=6 reliable.
   // =========================================================
 
   const selectedSession = useMemo(() => {
@@ -1078,87 +1110,12 @@ export const ReportsPage = () => {
   }, [sessions, selectedSessionId]);
 
   // =========================================================
-  // LOAD SESSIONS
-  // =========================================================
-
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    sessionService
-      .getByUserId(userId)
-      .then((data) => {
-        setSessions(data || []);
-      })
-      .catch(() => {
-        setSessions([]);
-        toast.error("Unable to load sessions.");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [userId]);
-
-  // =========================================================
   // SYNC URL WITH SELECTED SESSION
   // =========================================================
 
   useEffect(() => {
     setSelectedSessionId(sessionIdParam || null);
   }, [sessionIdParam]);
-
-  // =========================================================
-  // LOAD QUESTION COUNTS
-  // =========================================================
-
-  useEffect(() => {
-  if (!reportSessions.length) {
-    setQuestionCounts({});
-    return;
-  }
-
-  let cancelled = false;
-
-  Promise.all(
-    reportSessions.map(async (session) => {
-      try {
-        const conversations =
-          await conversationService.getBySession(session.id);
-
-        const answeredCount = Array.isArray(conversations)
-          ? conversations.filter((conversation) => {
-              const answer =
-                conversation?.userAnswer ??
-                conversation?.answer;
-
-              return (
-                answer != null &&
-                String(answer).trim() !== ""
-              );
-            }).length
-          : 0;
-
-        return [session.id, answeredCount];
-      } catch {
-        return [session.id, null];
-      }
-    })
-  ).then((entries) => {
-    if (!cancelled) {
-      setQuestionCounts(
-        Object.fromEntries(entries)
-      );
-    }
-  });
-
-  return () => {
-    cancelled = true;
-  };
-}, [reportSessions]);
 
   // =========================================================
   // LOAD SELECTED REPORT
@@ -1243,7 +1200,9 @@ export const ReportsPage = () => {
 
   const handleBackToReports = () => {
     setSelectedSessionId(null);
+
     setSearchParams({});
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -1290,7 +1249,7 @@ export const ReportsPage = () => {
   };
 
   // =========================================================
-  // LOADING
+  // INITIAL LOADING
   // =========================================================
 
   if (loading) {
@@ -1310,7 +1269,6 @@ export const ReportsPage = () => {
     if (!selectedSession) {
       return (
         <div className="space-y-5">
-
           <Card>
             <div className="flex flex-col items-center justify-center py-12 text-center">
 
@@ -1342,7 +1300,6 @@ export const ReportsPage = () => {
 
             </div>
           </Card>
-
         </div>
       );
     }
@@ -1355,16 +1312,12 @@ export const ReportsPage = () => {
     return (
       <div className="space-y-5">
 
-        {/* ===================================================
-            REPORT HEADER
-        =================================================== */}
+        {/* REPORT HEADER */}
 
         <Card>
-
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
-
               <p className="text-sm font-semibold text-sky-500">
                 Practice Completed
               </p>
@@ -1377,7 +1330,6 @@ export const ReportsPage = () => {
                 {selectedSession.topic ||
                   "Practice Session"}
               </p>
-
             </div>
 
             <StatusBadge
@@ -1385,12 +1337,9 @@ export const ReportsPage = () => {
             />
 
           </div>
-
         </Card>
 
-        {/* ===================================================
-            REPORT CONTENT
-        =================================================== */}
+        {/* REPORT CONTENT */}
 
         <Card className="space-y-6">
 
@@ -1406,20 +1355,16 @@ export const ReportsPage = () => {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
                 <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-
                   <p className="text-xs font-medium text-slate-500">
                     Topic
                   </p>
 
                   <p className="mt-1 break-words font-semibold text-slate-900 dark:text-white">
-                    {selectedSession.topic ||
-                      "-"}
+                    {selectedSession.topic || "-"}
                   </p>
-
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-
                   <p className="text-xs font-medium text-slate-500">
                     Mode
                   </p>
@@ -1429,11 +1374,9 @@ export const ReportsPage = () => {
                       selectedSession.mode
                     )}
                   </p>
-
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-
                   <p className="text-xs font-medium text-slate-500">
                     Difficulty
                   </p>
@@ -1443,11 +1386,9 @@ export const ReportsPage = () => {
                       selectedSession.difficultyLevel
                     )}
                   </p>
-
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-
                   <p className="text-xs font-medium text-slate-500">
                     Questions
                   </p>
@@ -1455,18 +1396,14 @@ export const ReportsPage = () => {
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">
                     {answeredConversations.length}
                   </p>
-
                 </div>
 
               </div>
 
-              {/* =================================================
-                  AI OVERALL REPORT
-              ================================================= */}
+              {/* AI OVERALL REPORT */}
 
               {aiReport?.overallEvaluation && (
                 <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
-
                   <p className="font-semibold text-sky-700 dark:text-sky-300">
                     Overall Evaluation
                   </p>
@@ -1474,17 +1411,13 @@ export const ReportsPage = () => {
                   <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {aiReport.overallEvaluation}
                   </p>
-
                 </div>
               )}
 
-              {/* =================================================
-                  STRENGTHS
-              ================================================= */}
+              {/* STRENGTHS */}
 
               {aiReport?.strengths && (
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-
                   <p className="font-semibold text-emerald-700 dark:text-emerald-300">
                     Strengths
                   </p>
@@ -1492,17 +1425,13 @@ export const ReportsPage = () => {
                   <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {aiReport.strengths}
                   </p>
-
                 </div>
               )}
 
-              {/* =================================================
-                  AREAS OF IMPROVEMENT
-              ================================================= */}
+              {/* AREAS OF IMPROVEMENT */}
 
               {aiReport?.areasOfImprovement && (
                 <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 dark:border-rose-900/40 dark:bg-rose-950/20">
-
                   <p className="font-semibold text-rose-700 dark:text-rose-300">
                     Areas Of Improvement
                   </p>
@@ -1510,17 +1439,13 @@ export const ReportsPage = () => {
                   <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {aiReport.areasOfImprovement}
                   </p>
-
                 </div>
               )}
 
-              {/* =================================================
-                  RECOMMENDATIONS
-              ================================================= */}
+              {/* RECOMMENDATIONS */}
 
               {aiReport?.recommendations && (
                 <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/20">
-
                   <p className="font-semibold text-sky-700 dark:text-sky-300">
                     Recommendations
                   </p>
@@ -1528,18 +1453,14 @@ export const ReportsPage = () => {
                   <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {aiReport.recommendations}
                   </p>
-
                 </div>
               )}
 
-              {/* =================================================
-                  QUESTION BY QUESTION
-              ================================================= */}
+              {/* QUESTION BY QUESTION */}
 
               <div>
 
                 <div className="mb-4">
-
                   <p className="text-sm font-semibold text-sky-500">
                     Detailed Feedback
                   </p>
@@ -1547,18 +1468,14 @@ export const ReportsPage = () => {
                   <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
                     Question-by-Question Feedback
                   </h2>
-
                 </div>
 
-                {answeredConversations.length ===
-                  0 ? (
+                {answeredConversations.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
-
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       No answered questions were
                       found for this session.
                     </p>
-
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1572,8 +1489,6 @@ export const ReportsPage = () => {
                           className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
                         >
 
-                          {/* QUESTION */}
-
                           <p className="font-semibold text-sky-600 dark:text-sky-400">
                             Q{index + 1}:{" "}
                             {item.aiQuestion ||
@@ -1581,10 +1496,7 @@ export const ReportsPage = () => {
                               "Question unavailable"}
                           </p>
 
-                          {/* ANSWER */}
-
                           <div className="mt-4">
-
                             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                               Your Answer
                             </p>
@@ -1594,26 +1506,21 @@ export const ReportsPage = () => {
                                 item.answer ||
                                 "No answer"}
                             </p>
-
                           </div>
-
-                          {/* FEEDBACK */}
 
                           {(item.aiFeedback ||
                             item.feedback) && (
-                              <div className="mt-4">
+                            <div className="mt-4">
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                AI Feedback
+                              </p>
 
-                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                  AI Feedback
-                                </p>
-
-                                <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
-                                  {item.aiFeedback ||
-                                    item.feedback}
-                                </p>
-
-                              </div>
-                            )}
+                              <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
+                                {item.aiFeedback ||
+                                  item.feedback}
+                              </p>
+                            </div>
+                          )}
 
                         </div>
                       )
@@ -1624,9 +1531,7 @@ export const ReportsPage = () => {
 
               </div>
 
-              {/* =================================================
-                  ACTIONS
-              ================================================= */}
+              {/* ACTIONS */}
 
               <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800">
 
@@ -1677,16 +1582,12 @@ export const ReportsPage = () => {
   return (
     <div className="space-y-5">
 
-      {/* ===================================================
-          HEADER
-      =================================================== */}
+      {/* HEADER */}
 
       <Card>
-
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
           <div>
-
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               Reports
             </h2>
@@ -1695,7 +1596,6 @@ export const ReportsPage = () => {
               Review your completed practice
               sessions.
             </p>
-
           </div>
 
           <label className="flex items-center gap-2 text-sm">
@@ -1726,18 +1626,13 @@ export const ReportsPage = () => {
           </label>
 
         </div>
-
       </Card>
 
-      {/* ===================================================
-          REPORT CARDS
-      =================================================== */}
+      {/* REPORT CARDS */}
 
-      {visibleReportSessions.length === 0 ? (
+      {filteredReportSessions.length === 0 ? (
         <Card>
-
           <div className="py-10 text-center">
-
             <p className="font-semibold text-slate-700 dark:text-slate-200">
               No completed reports found
             </p>
@@ -1746,109 +1641,109 @@ export const ReportsPage = () => {
               Complete a practice session to
               generate a report.
             </p>
-
           </div>
-
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
 
-          {visibleReportSessions.map((session) => (
-            <Card
-              key={session.id}
-              className="transition-all duration-200 hover:-translate-y-0.5 hover:ring-1 hover:ring-sky-500/30"
-            >
+          {filteredReportSessions.map(
+            (session) => (
+              <Card
+                key={session.id}
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:ring-1 hover:ring-sky-500/30"
+              >
 
-              {/* TOP */}
+                {/* TOP */}
 
-              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
 
-                <div className="min-w-0">
+                  <div className="min-w-0">
 
-                  <h3 className="break-words font-semibold text-slate-800 dark:text-slate-100">
-                    Topic:{" "}
-                    {session.topic ||
-                      "Untitled Practice"}
-                  </h3>
+                    <h3 className="break-words font-semibold text-slate-800 dark:text-slate-100">
+                      Topic:{" "}
+                      {session.topic ||
+                        "Untitled Practice"}
+                    </h3>
 
-                  {session.createdAt && (
-                    <p className="mt-1 text-xs text-slate-400">
-                      {new Date(
-                        session.createdAt
-                      ).toLocaleDateString()}
-                    </p>
-                  )}
+                    {session.createdAt && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        {new Date(
+                          session.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                    )}
+
+                  </div>
+
+                  <StatusBadge
+                    status={session.status}
+                  />
 
                 </div>
 
-                <StatusBadge
-                  status={session.status}
-                />
+                {/* DETAILS */}
 
-              </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
 
-              {/* DETAILS */}
+                  <p>
+                    <span className="font-medium">
+                      Mode:
+                    </span>{" "}
+                    {formatMode(session.mode)}
+                  </p>
 
-              <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <p>
+                    <span className="font-medium">
+                      Questions:
+                    </span>{" "}
+                    {questionCounts[
+                      session.id
+                    ] ?? "..."}
+                  </p>
 
-                <p>
-                  <span className="font-medium">
-                    Mode:
-                  </span>{" "}
-                  {formatMode(session.mode)}
-                </p>
+                </div>
 
-                <p>
-                  <span className="font-medium">
-                    Questions:
-                  </span>{" "}
-                  {questionCounts[
-                    session.id
-                  ] ?? "..."}
-                </p>
+                {/* ACTIONS */}
 
-              </div>
+                <div className="mt-5 flex gap-2">
 
-              {/* ACTIONS */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-xs"
+                    onClick={() =>
+                      handleViewReport(
+                        session
+                      )
+                    }
+                  >
+                    View Report
+                  </Button>
 
-              <div className="mt-5 flex gap-2">
+                  <Button
+                    type="button"
+                    className="text-xs"
+                    disabled={
+                      downloadingId ===
+                      session.id
+                    }
+                    onClick={() =>
+                      handleDownload(
+                        session
+                      )
+                    }
+                  >
+                    {downloadingId ===
+                      session.id
+                      ? "Downloading..."
+                      : "Download PDF"}
+                  </Button>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="text-xs"
-                  onClick={() =>
-                    handleViewReport(
-                      session
-                    )
-                  }
-                >
-                  View Report
-                </Button>
+                </div>
 
-                <Button
-                  type="button"
-                  className="text-xs"
-                  disabled={
-                    downloadingId ===
-                    session.id
-                  }
-                  onClick={() =>
-                    handleDownload(
-                      session
-                    )
-                  }
-                >
-                  {downloadingId ===
-                    session.id
-                    ? "Downloading..."
-                    : "Download PDF"}
-                </Button>
-
-              </div>
-
-            </Card>
-          ))}
+              </Card>
+            )
+          )}
 
         </div>
       )}
@@ -1873,17 +1768,20 @@ export const SettingsPage = () => {
 
   const {
     userId,
-    user: cachedUser,
-    setUser,
     logout,
   } = useAuth();
 
+  const {
+    profile,
+    analytics,
+    loading,
+    refreshSettings,
+  } = useSettings();
+
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
+
 
   // =========================================================
   // VOICE SETTINGS
@@ -1893,64 +1791,6 @@ export const SettingsPage = () => {
   const [selectedVoice, setSelectedVoice] = useState(
     () => localStorage.getItem("speakmate-voice") || ""
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSettings = async () => {
-      setLoading(true);
-      setProfileError("");
-
-      const profilePromise = userService
-        .getProfile()
-        .then((data) => {
-          if (cancelled) return;
-
-          setProfile(data);
-
-          setUser({
-            ...data,
-            role: cachedUser?.role,
-          });
-        })
-        .catch(() => {
-          if (cancelled) return;
-
-          setProfile(cachedUser || null);
-          setProfileError(
-            "Unable to refresh profile information."
-          );
-        });
-
-      const analyticsPromise = dashboardService
-        .getAnalytics()
-        .then((data) => {
-          if (!cancelled) {
-            setAnalytics(data);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setAnalytics(null);
-          }
-        });
-
-      await Promise.allSettled([
-        profilePromise,
-        analyticsPromise,
-      ]);
-
-      if (!cancelled) {
-        setLoading(false);
-      }
-    };
-
-    loadSettings();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // =========================================================
   // LOAD BROWSER VOICES
