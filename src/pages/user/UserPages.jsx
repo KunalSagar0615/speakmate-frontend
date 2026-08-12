@@ -663,6 +663,7 @@ export const ChatPracticePage = () => {
   return (
     <ChatWindow
       messages={messages}
+      questionNumber={questionNumber}
       answer={answer}
       setAnswer={setAnswer}
       onSend={onSend}

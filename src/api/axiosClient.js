@@ -11,9 +11,11 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use((config) => {
   const token = getStored(TOKEN_KEY);
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
@@ -22,9 +24,11 @@ axiosClient.interceptors.response.use(
   (error) => {
     const message = getErrorMessage(error);
     const status = error?.response?.status;
-    if ([401, 403, 500].includes(status) || !error?.response) {
-      toast.error(message);
+
+    if (!error?.config?.skipToast && ([401, 403, 500].includes(status) || !error?.response)) {
+      toast.error(message, {id: "api-network-error",});
     }
+
     return Promise.reject(error);
   }
 );
