@@ -1,4 +1,4 @@
-import { Mic, Volume2, CircleStop } from "lucide-react";
+import { Mic, Volume2, CircleStop , Sparkles } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button, Card } from "../common/UI";
 
@@ -256,7 +256,7 @@ export const ChatWindow = ({
             aria-label="Suggest Ans"
             className="px-4"
           >
-            <SuggestAnswerIcon size={20} />
+            <Sparkles size={20} />
           </Button>
 
           {/* End Session */}
@@ -408,10 +408,10 @@ export const VoicePanel = ({
       <Button
         onClick={onStart}
         disabled={listening || loading}
-        className="gap-2"
+        title="Start Speaking"
+        aria-label="Start Speaking"
       >
-        <Mic size={16} />
-        Start Speaking
+        <Mic size={20} />
       </Button>
 
       {/* Submit Answer */}
@@ -437,7 +437,7 @@ export const VoicePanel = ({
         aria-label="Suggest Ans"
         className="px-4"
       >
-        <SuggestAnswerIcon size={20} />
+        <Sparkles size={20} />
       </Button>
 
       {/* Replay AI Voice */}
@@ -445,10 +445,10 @@ export const VoicePanel = ({
         variant="secondary"
         onClick={onReplay}
         disabled={loading}
-        className="gap-2"
+        title="Replay AI Voice"
+        aria-label="Replay AI Voice"
       >
-        <Volume2 size={16} />
-        Replay AI Voice
+        <Volume2 size={20} />
       </Button>
 
       {/* End Session */}

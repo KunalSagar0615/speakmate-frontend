@@ -934,20 +934,14 @@ export const CustomPracticeSession = () => {
                   skipping ||
                   Boolean(evaluation)
                 }
+                title={listening ? "Stop Speaking" : "Start Speaking"}
+                aria-label={listening ? "Stop Speaking" : "Start Speaking"}
               >
-                <span className="flex items-center gap-2">
-                  {listening ? (
-                    <>
-                      <StopCircle size={16} />
-                      Stop Speaking
-                    </>
-                  ) : (
-                    <>
-                      <Mic size={16} />
-                      Start Speaking
-                    </>
-                  )}
-                </span>
+                {listening ? (
+                  <StopCircle size={20} />
+                ) : (
+                  <Mic size={20} />
+                )}
               </Button>
             )}
 
@@ -1034,7 +1028,7 @@ export const CustomPracticeSession = () => {
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${evaluationStyles[
                         evaluation.status
-                        ] ||
+                      ] ||
                         "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         }`}
                     >
