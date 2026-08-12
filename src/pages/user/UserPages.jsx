@@ -2358,23 +2358,6 @@ export const SettingsPage = () => {
 
           </span>
 
-          <span className="inline-flex items-center gap-1.5">
-
-            <Target
-              size={15}
-              className="text-sky-500"
-            />
-
-            Average score:
-
-            <strong className="text-slate-700 dark:text-slate-200">
-              {analytics?.averageScore != null
-                ? analytics.averageScore.toFixed(1)
-                : "0.0"}
-            </strong>
-
-          </span>
-
         </div>
       </section>
 
