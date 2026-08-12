@@ -842,20 +842,20 @@ export const VoicePracticePage = () => {
   };
 
   const onEnd = async () => {
-  stopListening();
-  stopSpeaking();
+    stopListening();
+    stopSpeaking();
 
-  try {
-    await sessionService.end(id);
+    try {
+      await sessionService.end(id);
 
-    toast.success("Session completed successfully");
+      toast.success("Session completed successfully");
 
-    // Open ONLY this session's report
-    navigate(`/reports?session=${id}`);
-  } catch {
-    toast.error("Failed to end session");
-  }
-};
+      // Open ONLY this session's report
+      navigate(`/reports?session=${id}`);
+    } catch {
+      toast.error("Failed to end session");
+    }
+  };
 
   return (
     <VoicePanel
@@ -1047,6 +1047,14 @@ export const ReportsPage = () => {
     );
   }, [sessions, modeFilter]);
 
+  const visibleReportSessions = useMemo(() => {
+  return reportSessions.filter((session) => {
+    const count = questionCounts[session.id];
+
+    return typeof count === "number" && count > 0;
+  });
+}, [reportSessions, questionCounts]);
+
   // =========================================================
   // SELECTED SESSION
   //
@@ -1108,43 +1116,49 @@ export const ReportsPage = () => {
   // =========================================================
 
   useEffect(() => {
-    if (!reportSessions.length) {
-      setQuestionCounts({});
-      return;
-    }
+  if (!reportSessions.length) {
+    setQuestionCounts({});
+    return;
+  }
 
-    let cancelled = false;
+  let cancelled = false;
 
-    Promise.all(
-      reportSessions.map(async (session) => {
-        try {
-          const summary =
-            await sessionService.getSummary(
-              session.id
-            );
+  Promise.all(
+    reportSessions.map(async (session) => {
+      try {
+        const conversations =
+          await conversationService.getBySession(session.id);
 
-          return [
-            session.id,
-            summary?.totalQuestions ??
-              summary?.totalConversations ??
-              0,
-          ];
-        } catch {
-          return [session.id, 0];
-        }
-      })
-    ).then((entries) => {
-      if (!cancelled) {
-        setQuestionCounts(
-          Object.fromEntries(entries)
-        );
+        const answeredCount = Array.isArray(conversations)
+          ? conversations.filter((conversation) => {
+              const answer =
+                conversation?.userAnswer ??
+                conversation?.answer;
+
+              return (
+                answer != null &&
+                String(answer).trim() !== ""
+              );
+            }).length
+          : 0;
+
+        return [session.id, answeredCount];
+      } catch {
+        return [session.id, null];
       }
-    });
+    })
+  ).then((entries) => {
+    if (!cancelled) {
+      setQuestionCounts(
+        Object.fromEntries(entries)
+      );
+    }
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [reportSessions]);
+  return () => {
+    cancelled = true;
+  };
+}, [reportSessions]);
 
   // =========================================================
   // LOAD SELECTED REPORT
@@ -1537,7 +1551,7 @@ export const ReportsPage = () => {
                 </div>
 
                 {answeredConversations.length ===
-                0 ? (
+                  0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
 
                     <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -1587,19 +1601,19 @@ export const ReportsPage = () => {
 
                           {(item.aiFeedback ||
                             item.feedback) && (
-                            <div className="mt-4">
+                              <div className="mt-4">
 
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                AI Feedback
-                              </p>
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                  AI Feedback
+                                </p>
 
-                              <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
-                                {item.aiFeedback ||
-                                  item.feedback}
-                              </p>
+                                <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
+                                  {item.aiFeedback ||
+                                    item.feedback}
+                                </p>
 
-                            </div>
-                          )}
+                              </div>
+                            )}
 
                         </div>
                       )
@@ -1639,7 +1653,7 @@ export const ReportsPage = () => {
                   }
                 >
                   {downloadingId ===
-                  selectedSession.id
+                    selectedSession.id
                     ? "Downloading..."
                     : "Download PDF"}
                 </Button>
@@ -1719,7 +1733,7 @@ export const ReportsPage = () => {
           REPORT CARDS
       =================================================== */}
 
-      {reportSessions.length === 0 ? (
+      {visibleReportSessions.length === 0 ? (
         <Card>
 
           <div className="py-10 text-center">
@@ -1739,7 +1753,7 @@ export const ReportsPage = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
 
-          {reportSessions.map((session) => (
+          {visibleReportSessions.map((session) => (
             <Card
               key={session.id}
               className="transition-all duration-200 hover:-translate-y-0.5 hover:ring-1 hover:ring-sky-500/30"
@@ -1826,7 +1840,7 @@ export const ReportsPage = () => {
                   }
                 >
                   {downloadingId ===
-                  session.id
+                    session.id
                     ? "Downloading..."
                     : "Download PDF"}
                 </Button>
