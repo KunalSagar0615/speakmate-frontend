@@ -13,9 +13,24 @@ export const getErrorMessage = (error) => {
   const status = error.response.status;
   const text = error.response.data?.message || error.response.data?.error;
   if (text) {
-    if (text.toLowerCase().includes("otp")) return "Invalid or expired OTP.";
-    if (text.toLowerCase().includes("gemini")) return "AI service is currently unavailable.";
-    return text;
+  const lowerText = text.toLowerCase();
+
+  if (lowerText.includes("otp")) {
+    return "Invalid or expired OTP.";
   }
+
+  if (lowerText.includes("gemini")) {
+    return "AI service is currently unavailable.";
+  }
+
+  if (
+    lowerText.includes("too many failed login attempts") ||
+    lowerText.includes("temporarily blocked")
+  ) {
+    return "Too many failed login attempts. Please try again after 15 minutes.";
+  }
+
+  return text;
+}
   return map[status] || "Something went wrong. Please try again.";
 };

@@ -6,9 +6,8 @@ import { Button, Card, ThemeToggle } from "../../components/common/UI";
 import { FOUNDER_PROFILE_IMAGE } from "../../utils/constants";
 
 const FOUNDER_PHRASES = [
-  "Founder of SpeakMate AI Friend",
+  "Founder of PrepFriend AI Friend",
   "Java Full Stack Developer",
-  "MCA Student",
   "AI Enthusiast",
 ];
 
@@ -16,7 +15,7 @@ const PageShell = ({ children }) => (
   <div className="flex min-h-screen flex-col bg-gradient-to-b from-sky-50 to-white dark:from-slate-950 dark:to-slate-900">
     <header className="mx-auto flex w-full max-w-4xl items-center justify-between p-6">
       <Link to="/" className="text-2xl font-black text-primary">
-        SpeakMate
+        PrepFriend
       </Link>
       <ThemeToggle />
     </header>
@@ -74,7 +73,7 @@ export const ContactPage = () => (
       </div>
 
       <p className="mt-8 rounded-xl bg-sky-50 p-4 text-sm leading-relaxed text-slate-600 dark:bg-sky-950/30 dark:text-slate-300">
-        If you are facing any bugs, have suggestions, or want updates regarding SpeakMate, feel free
+        If you are facing any bugs, have suggestions, or want updates regarding PrepFriend, feel free
         to contact us.
       </p>
 
@@ -90,7 +89,7 @@ export const PrivacyPolicyPage = () => (
     <Card className="prose prose-slate dark:prose-invert max-w-none">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Privacy Policy</h1>
       <p className="mt-4 text-slate-600 dark:text-slate-300">
-        At SpeakMate AI Friend, we respect your privacy.
+        At PrepFriend, we respect your privacy.
       </p>
 
       <section className="mt-8">
@@ -152,7 +151,7 @@ export const TermsServicesPage = () => (
     <Card className="prose prose-slate dark:prose-invert max-w-none">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Terms & Services</h1>
       <p className="mt-4 text-slate-600 dark:text-slate-300">
-        By using SpeakMate AI Friend you agree to:
+        By using PrepFriend you agree to:
       </p>
 
       <ul className="mt-6 list-disc space-y-2 pl-5 text-slate-600 dark:text-slate-300">
@@ -174,7 +173,7 @@ export const TermsServicesPage = () => (
       <section className="mt-8">
         <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Limitation</h2>
         <p className="mt-3 text-slate-600 dark:text-slate-300">
-          SpeakMate provides educational assistance only.
+          PrepFriend provides educational assistance only.
         </p>
       </section>
 

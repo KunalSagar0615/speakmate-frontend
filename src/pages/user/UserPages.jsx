@@ -125,7 +125,7 @@ export const UserDashboardPage = () => {
   const [heatmapLoading, setHeatmapLoading] = useState(true);
 
   const ANALYTICS_CACHE_KEY =
-    `speakmate_dashboard_analytics_${userId}`;
+    `PrepFriend_dashboard_analytics_${userId}`;
 
   useEffect(() => {
     if (!userId) {
@@ -1789,7 +1789,7 @@ export const SettingsPage = () => {
 
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(
-    () => localStorage.getItem("speakmate-voice") || ""
+    () => localStorage.getItem("PrepFriend-voice") || ""
   );
 
   // =========================================================
@@ -1822,7 +1822,7 @@ export const SettingsPage = () => {
         setSelectedVoice(defaultVoice.name);
 
         localStorage.setItem(
-          "speakmate-voice",
+          "PrepFriend-voice",
           defaultVoice.name
         );
       }
@@ -1853,7 +1853,7 @@ export const SettingsPage = () => {
     setSelectedVoice(voiceName);
 
     localStorage.setItem(
-      "speakmate-voice",
+      "PrepFriend-voice",
       voiceName
     );
   };
@@ -1882,7 +1882,7 @@ export const SettingsPage = () => {
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(
-      "Hello! I'm your SpeakMate practice partner. Let's improve your English together."
+      "Hello! I'm your PrepFriend practice partner. Let's improve your English together."
     );
 
     utterance.voice = voice;
@@ -1902,7 +1902,7 @@ export const SettingsPage = () => {
   const handleLogout = () => {
     window.speechSynthesis?.cancel();
     localStorage.removeItem(
-      `speakmate_dashboard_analytics_${userId}`
+      `PrepFriend_dashboard_analytics_${userId}`
     );
     logout();
     navigate("/login");
@@ -1962,7 +1962,7 @@ export const SettingsPage = () => {
 
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           Manage your profile and personalize your
-          SpeakMate experience.
+          PerpFriend experience.
         </p>
       </section>
 
@@ -1995,7 +1995,7 @@ export const SettingsPage = () => {
                 <h2 className="truncate text-xl font-bold text-slate-900 dark:text-white">
                   {profile?.name ||
                     profile?.username ||
-                    "SpeakMate User"}
+                    "PrepFriend User"}
                 </h2>
 
                 {verified && (
@@ -2182,7 +2182,7 @@ export const SettingsPage = () => {
           </div>
 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Choose the voice SpeakMate uses when
+            Choose the voice PrepFriend uses when
             speaking questions and messages.
           </p>
 
@@ -2264,7 +2264,7 @@ export const SettingsPage = () => {
           </h2>
 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            A quick look at your SpeakMate journey.
+            A quick look at your PrepFriend journey.
           </p>
 
         </div>
@@ -2376,7 +2376,7 @@ export const SettingsPage = () => {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Sign out of your SpeakMate account on
+              Sign out of your PrepFriend account on
               this device.
             </p>
 

@@ -66,7 +66,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
           <Link to="/" className="text-2xl font-black text-primary">
-            SpeakMate
+            PrepFriend
           </Link>
 
           <div className="flex items-center gap-2">

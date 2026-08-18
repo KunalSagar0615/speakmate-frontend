@@ -47,7 +47,7 @@ export default function HowItWorks() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-3xl text-slate-600 dark:text-slate-300">
-          SpeakMate makes English practice simple, interactive, and effective.
+          PrepFriend makes English practice simple, interactive, and effective.
           Start a conversation, receive feedback, and watch your confidence grow.
         </p>
       </div>

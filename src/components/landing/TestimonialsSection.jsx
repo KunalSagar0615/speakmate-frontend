@@ -6,13 +6,13 @@ const testimonials = [
     name: "Rahul Sharma",
     role: "Software Developer",
     review:
-      "SpeakMate helped me improve my interview confidence significantly. The AI interviewer feels surprisingly realistic.",
+      "PrepFriend helped me improve my interview confidence significantly. The AI interviewer feels surprisingly realistic.",
   },
   {
     name: "Priya Patel",
     role: "College Student",
     review:
-      "I use SpeakMate daily to practice English conversations. My fluency and confidence have improved a lot.",
+      "I use PrepFriend daily to practice English conversations. My fluency and confidence have improved a lot.",
   },
   {
     name: "Amit Verma",
@@ -31,7 +31,7 @@ export default function TestimonialsSection() {
         </span>
 
         <h2 className="mt-5 text-3xl font-black md:text-5xl">
-          What Learners Say About SpeakMate
+          What Learners Say About PrepFriend
         </h2>
 
         <p className="mx-auto mt-5 max-w-3xl text-slate-600 dark:text-slate-300">

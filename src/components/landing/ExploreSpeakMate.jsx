@@ -301,7 +301,7 @@ export default function ExploreSpeakMate() {
     <section className="mx-auto max-w-7xl px-6 py-24">
       <div className="text-center">
         <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-          EXPLORE SPEAKMATE
+          EXPLORE PREPFRIEND
         </span>
 
         <h2 className="mt-5 text-3xl font-black md:text-5xl">

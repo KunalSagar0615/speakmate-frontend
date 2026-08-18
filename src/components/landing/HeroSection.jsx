@@ -29,7 +29,7 @@ export default function HeroSection({
           </div>
 
           <h1 className="text-3xl font-black leading-tight text-primary md:text-4xl lg:text-5xl">
-            SpeakMate – Your AI Friend
+            PrepFriend
           </h1>
 
           <p className="mt-3 max-w-xl text-base text-slate-600 dark:text-slate-300">

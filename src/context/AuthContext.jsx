@@ -41,86 +41,86 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (payload) => {
-    setLoading(true);
+const login = async (payload) => {
+  setLoading(true);
 
-    try {
-      // 1. Login
-      const data = await authService.login(payload);
+  try {
+    const data = await authService.login(payload);
 
-      if (!data?.token) {
-        throw new Error("Authentication token was not returned by the server.");
-      }
-
-      // 2. IMPORTANT:
-      // Persist token BEFORE making any authenticated request.
-      setStored(TOKEN_KEY, data.token);
-
-      if (data.role) {
-        setStored(ROLE_KEY, data.role);
-      } else {
-        removeStored(ROLE_KEY);
-      }
-
-      // 3. Update React state
-      setToken(data.token);
-      setRole(data.role ?? null);
-
-      let nextUser =
-        data.user || {
-          username: data.username || payload.username,
-          role: data.role,
-        };
-
-      // 4. Now axiosClient can read the NEW token from localStorage.
-      try {
-        const profile = await userService.getProfile();
-
-        nextUser = {
-          ...profile,
-          role: data.role ?? profile?.role,
-        };
-      } catch (profileError) {
-        console.warn(
-          "Unable to load profile after login:",
-          profileError
-        );
-
-        nextUser = {
-          ...nextUser,
-          username:
-            nextUser?.username ||
-            data.username ||
-            payload.username,
-        };
-      }
-
-      // 5. Store user
-      persistUser(nextUser);
-
-      toast.success("Login successful");
-
-      return {
-        ...data,
-        user: nextUser,
-      };
-    } catch (error) {
-      // If login itself failed, don't leave stale auth data behind.
-      setToken(null);
-      setRole(null);
-      setUser(null);
-
-      removeStored(TOKEN_KEY);
-      removeStored(ROLE_KEY);
-      removeStored(USER_KEY);
-
-      toast.error(getErrorMessage(error) || "Login failed");
-
-      throw error;
-    } finally {
-      setLoading(false);
+    if (!data?.token) {
+      throw new Error(
+        "Authentication token was not returned by the server."
+      );
     }
-  };
+
+    setStored(TOKEN_KEY, data.token);
+
+    if (data.role) {
+      setStored(ROLE_KEY, data.role);
+    } else {
+      removeStored(ROLE_KEY);
+    }
+
+    setToken(data.token);
+    setRole(data.role ?? null);
+
+    let nextUser =
+      data.user || {
+        username: data.username || payload.username,
+        role: data.role,
+      };
+
+    // 4. Load profile
+    try {
+      const profile = await userService.getProfile();
+
+      nextUser = {
+        ...profile,
+        role: data.role ?? profile?.role,
+      };
+    } catch (profileError) {
+      console.warn(
+        "Unable to load profile after login:",
+        profileError
+      );
+
+      nextUser = {
+        ...nextUser,
+        username:
+          nextUser?.username ||
+          data.username ||
+          payload.username,
+      };
+    }
+
+    // 5. Store user
+    persistUser(nextUser);
+
+    toast.success("Login successful");
+
+    return {
+      ...data,
+      user: nextUser,
+    };
+
+  } catch (error) {
+    // Clear authentication state
+    setToken(null);
+    setRole(null);
+    setUser(null);
+
+    removeStored(TOKEN_KEY);
+    removeStored(ROLE_KEY);
+    removeStored(USER_KEY);
+
+    // IMPORTANT:
+    // Axios interceptor already displays the error toast.
+    throw error;
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   const logout = () => {
     setToken(null);

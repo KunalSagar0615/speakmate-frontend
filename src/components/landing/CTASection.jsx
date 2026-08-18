@@ -18,7 +18,7 @@ export default function CTASection({serverReady, isAuthenticated, AuthCTA,
 
           <p className="mx-auto mt-6 max-w-2xl text-lg text-white/90">
             Practice conversations, prepare for interviews, receive instant AI
-            feedback, and build confidence every day with SpeakMate AI Friend.
+            feedback, and build confidence every day with PrepFriend.
           </p>
 
           <div className="mt-10 flex flex-wrap justify-center gap-4">

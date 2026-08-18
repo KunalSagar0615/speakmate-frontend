@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const DEFAULT_PHRASES = ["SpeakMate AI Friend"];
+const DEFAULT_PHRASES = ["PrepFriend"];
 
 export const TypingAnimation = ({ phrases = DEFAULT_PHRASES, className = "" }) => {
   const [phraseIndex, setPhraseIndex] = useState(0);

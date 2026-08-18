@@ -29,7 +29,7 @@ export default function StatsSection() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="text-center">
           <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-            SPEAKMATE IN NUMBERS
+            PREPFRIEND IN NUMBERS
           </span>
 
           <h2 className="mt-5 text-3xl font-black md:text-5xl">

@@ -7,7 +7,7 @@ export const ContactSupport = () => (
       Need help or have suggestions?
     </h3>
     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-      Our support team is here to help you get the most out of SpeakMate.
+      Our support team is here to help you get the most out of PrepFriend.
     </p>
     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
       <a

@@ -59,7 +59,7 @@ const practiceSteps = [
     number: "01",
     title: "Select AI Mode",
     description:
-      "Choose how you want SpeakMate to interact with you during your practice.",
+      "Choose how you want PrepFriend to interact with you during your practice.",
   },
   {
     number: "02",
@@ -353,7 +353,7 @@ function CustomPracticeContent() {
       icon: Bot,
       title: "Extract questions",
       description:
-        "SpeakMate identifies and separates the questions from the content you provide.",
+        "PrepFriend identifies and separates the questions from the content you provide.",
     },
     {
       icon: Pencil,
@@ -696,7 +696,7 @@ export default function HowToUse() {
       <SectionHeading
         badge="How to Use"
         title="Start practicing in minutes"
-        description="From your first AI conversation to custom question practice and performance reports, here's everything you need to know about using SpeakMate."
+        description="From your first AI conversation to custom question practice and performance reports, here's everything you need to know about using PrepFriend."
       />
 
       <div className="mx-auto mt-12 flex max-w-4xl overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
@@ -737,7 +737,7 @@ export default function HowToUse() {
 
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
           Choose the practice method that matches your goal and use your
-          feedback to improve with every SpeakMate session.
+          feedback to improve with every PrepFriend session.
         </p>
 
         <button

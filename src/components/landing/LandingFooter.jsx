@@ -8,7 +8,7 @@ export default function LandingFooter() {
           {/* Brand */}
           <div>
             <h3 className="text-2xl font-black text-primary">
-              SpeakMate
+              PrepFriend
             </h3>
 
             <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
@@ -18,7 +18,7 @@ export default function LandingFooter() {
             </p>
 
             <p className="mt-6 text-sm text-slate-500">
-              © 2026 SpeakMate AI Friend
+              © 2026 PrepFriend. All rights reserved.
             </p>
           </div>
 

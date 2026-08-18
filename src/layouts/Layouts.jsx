@@ -8,7 +8,7 @@ import {
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SidebarLink } from "../components/common/UI";
-import speakMateLogo from "../assets/speakmate-logo.png";
+import prepFriendLogo from "../assets/prep-friend-logo.png";
 
 /* =========================================================
    AUTH LAYOUT
@@ -37,18 +37,18 @@ const UserNavbar = () => {
           className="group flex items-center gap-3"
         >
           <img
-            src={speakMateLogo}
-            alt="SpeakMate"
+            src={prepFriendLogo}
+            alt="PrepFriend"
             className="h-10 w-10 rounded-md object-cover shadow-sm transition duration-200 group-hover:scale-105"
           />
 
           <div className="leading-tight">
             <p className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-              SpeakMate
+              PrepFriend
             </p>
 
             <p className="hidden text-[11px] font-medium text-slate-500 sm:block dark:text-slate-400">
-              Your AI Friend
+              Your AI Friend for Better Conversations & Interview Preparation
             </p>
           </div>
         </Link>
@@ -81,11 +81,11 @@ const UserFooter = () => {
 
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
           <img
-            src={speakMateLogo}
-            alt="SpeakMate"
+            src={prepFriendLogo}
+            alt="PrepFriend"
             className="h-6 w-6 rounded-sm object-cover"
           />
-          <span>SpeakMate AI Friend</span>
+          <span>PrepFriend</span>
         </div>
 
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -138,14 +138,14 @@ const AdminNavbar = () => {
           className="group flex items-center gap-3"
         >
           <img
-            src={speakMateLogo}
-            alt="SpeakMate"
+            src={prepFriendLogo}
+            alt="PrepFriend"
             className="h-9 w-9 rounded-lg object-cover shadow-sm transition duration-200 group-hover:scale-105"
           />
 
           <div className="leading-tight">
             <p className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-              SpeakMate
+              PrepFriend
             </p>
 
             <p className="hidden text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:block dark:text-slate-400">
@@ -212,13 +212,13 @@ const AdminFooter = () => {
         {/* Brand */}
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
           <img
-            src={speakMateLogo}
-            alt="SpeakMate"
+            src={prepFriendLogo}
+            alt="PrepFriend"
             className="h-6 w-6 rounded-sm object-cover"
           />
 
           <span>
-            SpeakMate AI Friend
+            PrepFriend
           </span>
         </div>
 

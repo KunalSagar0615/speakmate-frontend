@@ -4,9 +4,9 @@ import { Card } from "../common/UI";
 
 const faqs = [
   {
-    question: "Is SpeakMate free to use?",
+    question: "Is PrepFriend free to use?",
     answer:
-      "Yes. SpeakMate provides free AI-powered conversation practice. Additional premium features may be added in the future.",
+      "Yes. PrepFriend provides free AI-powered conversation practice. Additional premium features may be added in the future.",
   },
   {
     question: "Can I prepare for job interviews?",
@@ -14,17 +14,17 @@ const faqs = [
       "Absolutely. The AI Interviewer mode helps you practice HR and technical interviews with realistic questions and feedback.",
   },
   {
-    question: "Does SpeakMate provide feedback?",
+    question: "Does PrepFriend provide feedback?",
     answer:
-      "Yes. SpeakMate analyzes your responses and provides suggestions to improve communication, grammar, vocabulary, and confidence.",
+      "Yes. PrepFriend analyzes your responses and provides suggestions to improve communication, grammar, vocabulary, and confidence.",
   },
   {
-    question: "Can I use SpeakMate on mobile devices?",
+    question: "Can I use PrepFriend on mobile devices?",
     answer:
-      "Yes. SpeakMate is fully responsive and works on desktops, tablets, and smartphones.",
+      "Yes. PrepFriend is fully responsive and works on desktops, tablets, and smartphones.",
   },
   {
-    question: "Does SpeakMate track my progress?",
+    question: "Does PrepFriend track my progress?",
     answer:
       "Yes. You can view session history, performance reports, activity tracking, streaks, and learning trends.",
   },
@@ -45,7 +45,7 @@ export default function FAQSection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-3xl text-slate-600 dark:text-slate-300">
-          Everything you need to know about SpeakMate AI Friend.
+          Everything you need to know about PrepFriend AI Friend.
         </p>
       </div>
 

@@ -75,10 +75,10 @@ export const ContactPage = () => (
                 </div>
 
                 <p className="mx-auto mt-6 max-w-2xl leading-7 text-slate-600 dark:text-slate-300">
-                    Thank you for using <strong>SpeakMate AI Friend</strong>.
+                    Thank you for using <strong>PrepFriend</strong>.
                     If you've found a bug, have a feature request,
                     or simply want to connect, I'd love to hear from you.
-                    Your feedback helps make SpeakMate better for everyone.
+                    Your feedback helps make PrepFriend better for everyone.
                 </p>
             </div>
 
@@ -172,7 +172,7 @@ export const ContactPage = () => (
                         </h3>
 
                         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            Have an idea that could improve SpeakMate?
+                            Have an idea that could improve PrepFriend?
                             We'd love to hear your suggestions for future updates.
                         </p>
                     </div>
@@ -198,11 +198,11 @@ export const ContactPage = () => (
             <div className="mt-12 rounded-3xl bg-primary p-8 text-white shadow-xl">
 
                 <h2 className="text-3xl font-bold">
-                    About SpeakMate AI Friend
+                    About PrepFriend
                 </h2>
 
                 <p className="mt-5 leading-8 text-primary-foreground/90">
-                    SpeakMate AI Friend is an AI-powered English speaking practice
+                    PrepFriend is an AI-powered English speaking practice
                     platform built to help learners improve their communication
                     skills through realistic conversations, instant AI feedback,
                     personalized practice sessions, and detailed performance reports.
