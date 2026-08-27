@@ -12,7 +12,7 @@ import TestimonialsSection from "../components/landing/TestimonialsSection";
 import FAQSection from "../components/landing/FAQSection";
 import CTASection from "../components/landing/CTASection";
 import LandingFooter from "../components/landing/LandingFooter";
-import ExploreSpeakMate from "../components/landing/ExploreSpeakMate";
+import ExplorePrepFriend from "../components/landing/ExplorePrepFriend";
 
 const AuthCTA = ({ className = "" }) => {
   const { isAuthenticated } = useAuth();
@@ -120,7 +120,7 @@ export default function LandingPage() {
 
         <HowItWorks />
 
-        <ExploreSpeakMate />
+        <ExplorePrepFriend />
 
         <StatsSection />
 

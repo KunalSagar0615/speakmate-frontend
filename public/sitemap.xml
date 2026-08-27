@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+>
+
+  <url>
+    <loc>https://prepfriend.netlify.app/</loc>
+  </url>
+
+  <url>
+    <loc>https://prepfriend.netlify.app/how-to-use</loc>
+  </url>
+
+  <url>
+    <loc>https://prepfriend.netlify.app/privacy-policy</loc>
+  </url>
+
+  <url>
+    <loc>https://prepfriend.netlify.app/terms-services</loc>
+  </url>
+
+  <url>
+    <loc>https://prepfriend.netlify.app/contact</loc>
+  </url>
+
+</urlset>
