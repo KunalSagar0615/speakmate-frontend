@@ -215,6 +215,7 @@ export const LoginPage = () => {
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+
   const [registering, setRegistering] = useState(false);
 
   const [form, setForm] = useState({
@@ -244,9 +245,7 @@ export const RegisterPage = () => {
     try {
       await authService.register(form);
 
-      toast.success(
-        "Registration successful. Verify your OTP."
-      );
+      toast.success("Registration successful. Verify your OTP.");
 
       navigate("/verify-otp", {
         state: {
@@ -255,7 +254,6 @@ export const RegisterPage = () => {
       });
     } catch (error) {
       toast.error(getErrorMessage(error));
-
       setRegistering(false);
     }
   };
@@ -268,52 +266,124 @@ export const RegisterPage = () => {
       />
     );
   }
+
   return (
-    <Card>
-      <h2 className="text-2xl font-bold">
-        Create your account
-      </h2>
+    <div className="w-full py-8 md:py-10">
 
-      <form
-        className="mt-4 grid gap-3 md:grid-cols-2"
-        onSubmit={onSubmit}
-        autoComplete="off"
-      >
-        {REGISTER_FIELDS.map(
-          ({
-            key,
-            label,
-            type = "text",
-            autoComplete,
-          }) => (
-            <Input
-              key={key}
-              label={label}
-              name={`speakmate-${key}`}
-              id={`speakmate-${key}`}
-              type={type}
-              value={form[key]}
-              onChange={(e) =>
-                onChange(
-                  key,
-                  e.target.value
-                )
-              }
-              autoComplete={
-                autoComplete
-              }
-            />
-          )
-        )}
-
-        <Button
-          className="md:col-span-2"
-          disabled={registering}
+      {/* =========================
+    PRIVACY NOTICE
+========================== */}
+      <section className="w-full">
+        <div
+          className="
+      relative
+      left-1/2
+      -translate-x-1/2
+      w-[90vw]
+      rounded-xl
+      border border-slate-200
+      bg-slate-50
+      p-6
+      shadow-sm
+      dark:border-slate-700
+      dark:bg-slate-800/60
+      md:p-8
+    "
         >
-          Register
-        </Button>
-      </form>
-    </Card>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 md:text-2xl">
+            Privacy Notice
+          </h2>
+
+          <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
+            To create your PrepFriend account, we collect the information
+            you provide in this registration form, including your name,
+            username, email address, mobile number, country, highest
+            education, current occupation, and password.
+          </p>
+
+          <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
+            This information is used to create and manage your account,
+            authenticate you, provide study and interview-practice
+            features, maintain your practice progress, and help keep
+            PrepFriend secure.
+          </p>
+
+          <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
+            Your password is securely protected and is not available for
+            viewing by administrators.
+          </p>
+
+          <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
+            Your practice and learning activity may also be stored when
+            you use PrepFriend&apos;s study and interview-practice features.
+          </p>
+
+          <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
+            For more information about how your information is collected,
+            used, stored, and protected, please read our{" "}
+            <Link
+              to="/privacy-policy"
+              className="font-medium text-primary hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
+
+      {/* =========================
+          GAP
+      ========================== */}
+      <div className="h-12 md:h-16" />
+
+      {/* =========================
+          REGISTER SECTION
+      ========================== */}
+      <section className="flex w-full justify-center">
+        <Card className="w-[590px] max-w-[calc(100%-2rem)]">
+          <h2 className="text-2xl font-bold">
+            Create your account
+          </h2>
+
+          <form
+            className="mt-4 grid gap-3 md:grid-cols-2"
+            onSubmit={onSubmit}
+            autoComplete="off"
+          >
+            {REGISTER_FIELDS.map(
+              ({
+                key,
+                label,
+                type = "text",
+                autoComplete,
+              }) => (
+                <Input
+                  key={key}
+                  label={label}
+                  name={`speakmate-${key}`}
+                  id={`speakmate-${key}`}
+                  type={type}
+                  value={form[key]}
+                  onChange={(e) =>
+                    onChange(key, e.target.value)
+                  }
+                  autoComplete={autoComplete}
+                />
+              )
+            )}
+
+            <Button
+              className="md:col-span-2"
+              disabled={registering}
+            >
+              Register
+            </Button>
+          </form>
+        </Card>
+      </section>
+
+    </div>
   );
 };
 
