@@ -2,11 +2,13 @@ import {
   ArrowUpRight,
   Briefcase,
   CalendarDays,
+  CheckCircle2,
   FileBarChart2,
   Flame,
   GraduationCap,
   MessageCircle,
   Sparkles,
+  Volume2,
   Waves,
 } from "lucide-react";
 
@@ -123,6 +125,7 @@ export const DashboardHero = ({
   onTeacherPractice,
   onInterviewerPractice,
   onCustomPractice,
+  onTongueTwister,
   onReports,
 }) => {
 
@@ -181,6 +184,19 @@ export const DashboardHero = ({
       icon: Sparkles,
       statIcon: CalendarDays,
       onClick: onCustomPractice,
+    },
+    {
+      title: "Tongue Twister",
+      description:
+        "Improve your pronunciation, speaking clarity and English fluency.",
+      stat: stats?.tongueTwisterCompleted ?? 0,
+      statLabel:
+        (stats?.tongueTwisterCompleted ?? 0) === 1
+          ? "completed session"
+          : "completed sessions",
+      icon: Volume2,
+      statIcon: CheckCircle2,
+      onClick: onTongueTwister,
     },
     {
       title: "Reports",

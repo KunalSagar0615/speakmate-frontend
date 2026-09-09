@@ -1,5 +1,7 @@
-import {BarChart3, Calendar, CheckCircle2, Flame, LogOut, Mail, Moon, Phone, ShieldCheck, Sun, Target, Trophy, User, BriefcaseBusiness,
-  GraduationCap, Globe2, MessageSquare, Volume2, Play, } from "lucide-react";
+import {
+  BarChart3, Calendar, CheckCircle2, Flame, LogOut, Mail, Moon, Phone, ShieldCheck, Sun, Target, Trophy, User, BriefcaseBusiness,
+  GraduationCap, Globe2, MessageSquare, Volume2, Play,
+} from "lucide-react";
 import { useEffect, useRef, useMemo, useState } from "react";
 import { translateText, getTranslationLabel } from "../../utils/translation";
 import toast from "react-hot-toast";
@@ -13,6 +15,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useVoicePractice } from "../../hooks/useVoicePractice";
 import { conversationService } from "../../services/conversationService";
+import { tongueTwisterService } from "../../services/tongueTwisterService";
 import { dashboardService } from "../../services/dashboardService";
 import { reportService } from "../../services/reportService";
 import { sessionService } from "../../services/sessionService";
@@ -123,6 +126,7 @@ export const UserDashboardPage = () => {
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState("");
   const [heatmapLoading, setHeatmapLoading] = useState(true);
+  const [tongueTwisterStats, setTongueTwisterStats] = useState(null);
 
   const ANALYTICS_CACHE_KEY =
     `PrepFriend_dashboard_analytics_${userId}`;
@@ -137,6 +141,15 @@ export const UserDashboardPage = () => {
     // --------------------------------------------------
 
     loadReports();
+
+    tongueTwisterService
+      .getStats()
+      .then((data) => {
+        setTongueTwisterStats(data);
+      })
+      .catch(() => {
+        setTongueTwisterStats(null);
+      });
 
     // --------------------------------------------------
     // LOAD DASHBOARD ANALYTICS
@@ -206,6 +219,15 @@ export const UserDashboardPage = () => {
 
           reportsGenerated:
             analytics?.reportsGenerated ?? "...",
+
+          tongueTwisterSessions:
+            tongueTwisterStats?.totalSessions ?? "...",
+
+          tongueTwisterCompleted:
+            tongueTwisterStats?.completedSessions ?? "...",
+
+          tongueTwisterPassages:
+            tongueTwisterStats?.totalPassages ?? "...",
         }}
 
         userName={
@@ -245,6 +267,11 @@ export const UserDashboardPage = () => {
         onReports={() =>
           navigate("/reports")
         }
+
+        onTongueTwister={() =>
+          navigate("/tongue-twister")
+        }
+
       />
 
       <section>
@@ -684,19 +711,19 @@ export const ChatPracticePage = () => {
   // --------------------------------------------------
 
   const onEnd = async () => {
-  try {
-    await sessionService.end(id);
+    try {
+      await sessionService.end(id);
 
-    // Update the reports cache before opening Reports.
-    await refreshReports();
+      // Update the reports cache before opening Reports.
+      await refreshReports();
 
-    toast.success("Session completed successfully");
+      toast.success("Session completed successfully");
 
-    navigate(`/reports?session=${id}`);
-  } catch {
-    toast.error("Failed to end session");
-  }
-};
+      navigate(`/reports?session=${id}`);
+    } catch {
+      toast.error("Failed to end session");
+    }
+  };
 
   // --------------------------------------------------
   // UI
@@ -885,22 +912,22 @@ export const VoicePracticePage = () => {
   };
 
   const onEnd = async () => {
-  stopListening();
-  stopSpeaking();
+    stopListening();
+    stopSpeaking();
 
-  try {
-    await sessionService.end(id);
+    try {
+      await sessionService.end(id);
 
-    // Update the reports cache before opening Reports.
-    await refreshReports();
+      // Update the reports cache before opening Reports.
+      await refreshReports();
 
-    toast.success("Session completed successfully");
+      toast.success("Session completed successfully");
 
-    navigate(`/reports?session=${id}`);
-  } catch {
-    toast.error("Failed to end session");
-  }
-};
+      navigate(`/reports?session=${id}`);
+    } catch {
+      toast.error("Failed to end session");
+    }
+  };
 
   return (
     <VoicePanel
@@ -1510,17 +1537,17 @@ export const ReportsPage = () => {
 
                           {(item.aiFeedback ||
                             item.feedback) && (
-                            <div className="mt-4">
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                AI Feedback
-                              </p>
+                              <div className="mt-4">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                  AI Feedback
+                                </p>
 
-                              <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
-                                {item.aiFeedback ||
-                                  item.feedback}
-                              </p>
-                            </div>
-                          )}
+                                <p className="rounded-xl bg-sky-50 p-3 text-sm leading-6 text-slate-700 dark:bg-sky-950/20 dark:text-slate-300">
+                                  {item.aiFeedback ||
+                                    item.feedback}
+                                </p>
+                              </div>
+                            )}
 
                         </div>
                       )

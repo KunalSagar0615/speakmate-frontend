@@ -1,9 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AdminLayout, AuthLayout, UserLayout } from "../layouts/Layouts";
+
 import { AdminSettingsPage } from "../pages/admin/AdminSettingsPage";
+
 import LandingPage from "../pages/LandingPage";
+
 import HowToUse from "../components/landing/HowToUse";
+
 import { ContactPage } from "../pages/legal/ContactPage";
 
 import {
@@ -44,6 +48,9 @@ import { CustomPracticeReport } from "../pages/custom-practice/CustomPracticeRep
 import { CustomPracticeSession } from "../pages/custom-practice/CustomPracticeSession";
 import { CustomPracticeSetup } from "../pages/custom-practice/CustomPracticeSetup";
 
+import { TongueTwisterHome } from "../pages/tongue-twister/TongueTwisterHome";
+import { TongueTwisterSession } from "../pages/tongue-twister/TongueTwisterSession";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -52,7 +59,10 @@ export default function AppRoutes() {
           PUBLIC ROUTES
       ===================================================== */}
 
-      <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/"
+        element={<LandingPage />}
+      />
 
       <Route
         path="/privacy-policy"
@@ -107,15 +117,18 @@ export default function AppRoutes() {
       ===================================================== */}
 
       <Route element={<ProtectedRoute />}>
+
         <Route element={<UserLayout />}>
 
           {/* Dashboard */}
+
           <Route
             path="/dashboard"
             element={<UserDashboardPage />}
           />
 
           {/* Standard Practice */}
+
           <Route
             path="/practice"
             element={<StartPracticePage />}
@@ -132,6 +145,7 @@ export default function AppRoutes() {
           />
 
           {/* Custom Practice */}
+
           <Route
             path="/custom-practice"
             element={<CustomPracticeHome />}
@@ -152,7 +166,22 @@ export default function AppRoutes() {
             element={<CustomPracticeReport />}
           />
 
+          {/* =================================================
+              TONGUE TWISTER
+          ================================================= */}
+
+          <Route
+            path="/tongue-twister"
+            element={<TongueTwisterHome />}
+          />
+
+          <Route
+            path="/tongue-twister/session/:sessionId"
+            element={<TongueTwisterSession />}
+          />
+
           {/* Sessions */}
+
           <Route
             path="/sessions"
             element={<SessionsPage />}
@@ -164,24 +193,33 @@ export default function AppRoutes() {
           />
 
           {/* Reports */}
+
           <Route
             path="/reports"
             element={<ReportsPage />}
           />
 
           {/* Centralized Settings */}
+
           <Route
             path="/settings"
             element={<SettingsPage />}
           />
 
           {/* Old profile URL → Settings */}
+
           <Route
             path="/profile"
-            element={<Navigate to="/settings" replace />}
+            element={
+              <Navigate
+                to="/settings"
+                replace
+              />
+            }
           />
 
         </Route>
+
       </Route>
 
       {/* =====================================================
@@ -189,6 +227,7 @@ export default function AppRoutes() {
       ===================================================== */}
 
       <Route element={<AdminRoute />}>
+
         <Route element={<AdminLayout />}>
 
           <Route
@@ -220,7 +259,9 @@ export default function AppRoutes() {
             path="/admin/settings"
             element={<AdminSettingsPage />}
           />
+
         </Route>
+
       </Route>
 
       {/* =====================================================
@@ -229,7 +270,12 @@ export default function AppRoutes() {
 
       <Route
         path="*"
-        element={<Navigate to="/" replace />}
+        element={
+          <Navigate
+            to="/"
+            replace
+          />
+        }
       />
 
     </Routes>
